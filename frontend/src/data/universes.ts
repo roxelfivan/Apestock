@@ -1,4 +1,6 @@
-export const SP100 = [
+import type { AssetType } from "../types";
+
+export const SP100: string[] = [
   "AAPL",
   "ABBV",
   "ABT",
@@ -102,7 +104,7 @@ export const SP100 = [
   "XOM",
 ];
 
-export const CRYPTO_TOP50 = [
+export const CRYPTO_TOP50: string[] = [
   "BTC-USD",
   "ETH-USD",
   "USDT-USD",
@@ -155,11 +157,11 @@ export const CRYPTO_TOP50 = [
   "MNT-USD",
 ];
 
-export function universeFor(assetType) {
+export function universeFor(assetType: AssetType): string[] {
   return assetType === "CRYPTO" ? CRYPTO_TOP50 : SP100;
 }
 
-export function isValidTicker(ticker, assetType) {
+export function isValidTicker(ticker: string, assetType: AssetType): boolean {
   const symbol = (ticker || "").trim().toUpperCase();
   return universeFor(assetType).includes(symbol);
 }

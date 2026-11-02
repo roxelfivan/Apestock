@@ -7,13 +7,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { BacktestResult } from "../types";
 
-function formatPct(value) {
+function formatPct(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function formatMoney(value) {
+function formatMoney(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -21,7 +22,18 @@ function formatMoney(value) {
   }).format(value);
 }
 
-function MetricCard({ label, value, tone = "neutral" }) {
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  return Number(value);
+}
+
+interface MetricCardProps {
+  label: string;
+  value: string;
+  tone?: "positive" | "negative" | "neutral";
+}
+
+function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
   const toneClass =
     tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
   return (
@@ -32,7 +44,11 @@ function MetricCard({ label, value, tone = "neutral" }) {
   );
 }
 
-export default function MetricsDashboard({ result }) {
+interface MetricsDashboardProps {
+  result: BacktestResult | null;
+}
+
+export default function MetricsDashboard({ result }: MetricsDashboardProps) {
   if (!result) {
     return (
       <section className="flex min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
@@ -99,7 +115,7 @@ export default function MetricsDashboard({ result }) {
                 tick={{ fill: "#94a3b8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={formatMoney}
+                tickFormatter={(value: number) => formatMoney(value)}
                 width={72}
               />
               <Tooltip
@@ -109,7 +125,7 @@ export default function MetricsDashboard({ result }) {
                   borderRadius: 12,
                   color: "#f8fafc",
                 }}
-                formatter={(value, name) => [formatMoney(value), name]}
+                formatter={(value, name) => [formatMoney(toNumber(value)), String(name)]}
               />
               <Line
                 type="monotone"

@@ -1,0 +1,12 @@
+{
+  "name": "apestock",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "npm run build -w frontend",
+    "typecheck": "npm run typecheck -w apestock-backend && npm run typecheck -w frontend"
+  }
+}

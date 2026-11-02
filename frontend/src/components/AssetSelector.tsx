@@ -1,6 +1,19 @@
+import type { AssetType } from "../types";
 import { isValidTicker, universeFor } from "../data/universes";
 
-export default function AssetSelector({ assetType, ticker, onAssetTypeChange, onTickerChange }) {
+interface AssetSelectorProps {
+  assetType: AssetType;
+  ticker: string;
+  onAssetTypeChange: (assetType: AssetType) => void;
+  onTickerChange: (ticker: string) => void;
+}
+
+export default function AssetSelector({
+  assetType,
+  ticker,
+  onAssetTypeChange,
+  onTickerChange,
+}: AssetSelectorProps) {
   const universe = universeFor(assetType);
   const normalized = ticker.trim().toUpperCase();
   const valid = !normalized || isValidTicker(normalized, assetType);

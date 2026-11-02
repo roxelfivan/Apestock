@@ -1,3 +1,20 @@
+import type { FormEvent } from "react";
+import type { StrategyName, StrategyParams, Timeframe } from "../types";
+
+interface StrategyFormProps {
+  strategy: StrategyName;
+  params: StrategyParams;
+  startingCapital: number;
+  timeframe: Timeframe;
+  loading: boolean;
+  tickerValid: boolean;
+  onStrategyChange: (strategy: StrategyName) => void;
+  onParamsChange: (patch: Partial<StrategyParams>) => void;
+  onStartingCapitalChange: (value: number) => void;
+  onTimeframeChange: (timeframe: Timeframe) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}
+
 export default function StrategyForm({
   strategy,
   params,
@@ -10,7 +27,7 @@ export default function StrategyForm({
   onStartingCapitalChange,
   onTimeframeChange,
   onSubmit,
-}) {
+}: StrategyFormProps) {
   const fieldClass =
     "mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20";
 
@@ -28,7 +45,7 @@ export default function StrategyForm({
       <select
         id="strategy"
         value={strategy}
-        onChange={(event) => onStrategyChange(event.target.value)}
+        onChange={(event) => onStrategyChange(event.target.value as StrategyName)}
         className={fieldClass}
       >
         <option value="MA_CROSSOVER">Moving average crossover</option>
@@ -44,8 +61,8 @@ export default function StrategyForm({
             <input
               id="shortPeriod"
               type="number"
-              min="2"
-              value={params.shortPeriod}
+              min={2}
+              value={params.shortPeriod ?? ""}
               onChange={(event) => onParamsChange({ shortPeriod: Number(event.target.value) })}
               className={fieldClass}
             />
@@ -57,8 +74,8 @@ export default function StrategyForm({
             <input
               id="longPeriod"
               type="number"
-              min="3"
-              value={params.longPeriod}
+              min={3}
+              value={params.longPeriod ?? ""}
               onChange={(event) => onParamsChange({ longPeriod: Number(event.target.value) })}
               className={fieldClass}
             />
@@ -73,8 +90,8 @@ export default function StrategyForm({
             <input
               id="rsiPeriod"
               type="number"
-              min="2"
-              value={params.rsiPeriod}
+              min={2}
+              value={params.rsiPeriod ?? ""}
               onChange={(event) => onParamsChange({ rsiPeriod: Number(event.target.value) })}
               className={fieldClass}
             />
@@ -86,9 +103,9 @@ export default function StrategyForm({
             <input
               id="oversold"
               type="number"
-              min="1"
-              max="49"
-              value={params.oversold}
+              min={1}
+              max={49}
+              value={params.oversold ?? ""}
               onChange={(event) => onParamsChange({ oversold: Number(event.target.value) })}
               className={fieldClass}
             />
@@ -100,9 +117,9 @@ export default function StrategyForm({
             <input
               id="overbought"
               type="number"
-              min="51"
-              max="99"
-              value={params.overbought}
+              min={51}
+              max={99}
+              value={params.overbought ?? ""}
               onChange={(event) => onParamsChange({ overbought: Number(event.target.value) })}
               className={fieldClass}
             />
@@ -118,7 +135,7 @@ export default function StrategyForm({
           <input
             id="capital"
             type="number"
-            min="1"
+            min={1}
             value={startingCapital}
             onChange={(event) => onStartingCapitalChange(Number(event.target.value))}
             className={fieldClass}
@@ -131,7 +148,7 @@ export default function StrategyForm({
           <select
             id="timeframe"
             value={timeframe}
-            onChange={(event) => onTimeframeChange(event.target.value)}
+            onChange={(event) => onTimeframeChange(event.target.value as Timeframe)}
             className={fieldClass}
           >
             <option value="1Y">1Y</option>

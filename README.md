@@ -4,8 +4,8 @@ MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a No
 
 ## Stack
 
-- Frontend: React (Vite), Tailwind CSS, Recharts
-- Backend: Express, `yahoo-finance2`, `technicalindicators`
+- Frontend: React + TypeScript (Vite), Tailwind CSS, Recharts
+- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, `technicalindicators`)
 
 ## Universe
 
@@ -21,23 +21,58 @@ Signals are computed on day **T close**. Orders fill on day **T+1 open**. Positi
 
 ## Run locally
 
-Use two terminals.
+From the repo root:
 
 ```bash
-cd backend
 npm install
-npm start
+```
+
+Then use two terminals.
+
+```bash
+npm start -w apestock-backend
 ```
 
 Backend listens on `http://localhost:3001`.
 
 ```bash
-cd frontend
-npm install
-npm run dev
+npm run dev -w frontend
 ```
 
 Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
+
+## Deploy on Vercel (frontend + API together)
+
+Vercel is not a long-running Node host. This repo is set up as **one Vercel project**:
+
+- **Frontend** — Vite builds to `frontend/dist` and is served as static files
+- **Backend** — `POST /api/backtest` and `GET /api/health` are serverless functions in [`api/`](api/) that call the same TypeScript engine as local Express
+
+The UI already calls `/api/backtest` (same origin). Locally Vite proxies that to Express; on Vercel the `/api/*` functions handle it.
+
+### Steps
+
+1. Push this repo to GitHub (already done if you are on the PR branch).
+2. In [Vercel](https://vercel.com) → **Add New** → **Project** → import `Apestock`.
+3. Leave **Root Directory** as the repository root (do not set it to `frontend`).
+4. Framework Preset: **Other** (this repo ships [`vercel.json`](vercel.json)).
+5. Node.js version **22.x**.
+6. Leave Install / Build / Output as the `vercel.json` defaults (do not paste a custom `npm install --prefix ...` command).
+7. Deploy. No env vars are required (Yahoo Finance is unauthenticated).
+
+A previous deploy failed with **exit 254** because Vercel broke `npm install --prefix` into `npm install -`. The repo now uses npm workspaces and Vercel’s default `npm install`.
+
+```bash
+npm i -g vercel
+vercel
+```
+
+After deploy, open `https://<your-app>.vercel.app` and run a backtest. Check `https://<your-app>.vercel.app/api/health`.
+
+### What not to do
+
+- Do not create two Vercel projects (one for `frontend`, one for `backend`) unless you also set a public API URL and CORS. The current UI has no `VITE_API_URL`; it expects same-origin `/api`.
+- Do not set the Vercel root directory to `frontend/` — the serverless functions would be left out.
 
 ## API
 

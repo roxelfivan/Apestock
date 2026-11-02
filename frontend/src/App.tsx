@@ -1,28 +1,29 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import AssetSelector from "./components/AssetSelector";
 import MetricsDashboard from "./components/MetricsDashboard";
 import StrategyForm from "./components/StrategyForm";
 import { isValidTicker, universeFor } from "./data/universes";
+import type { ApiError, AssetType, BacktestResult, StrategyName, StrategyParams, Timeframe } from "./types";
 
-const DEFAULT_PARAMS = {
+const DEFAULT_PARAMS: Record<StrategyName, StrategyParams> = {
   MA_CROSSOVER: { shortPeriod: 50, longPeriod: 200 },
   RSI: { rsiPeriod: 14, oversold: 30, overbought: 70 },
 };
 
 export default function App() {
-  const [assetType, setAssetType] = useState("STOCK");
+  const [assetType, setAssetType] = useState<AssetType>("STOCK");
   const [ticker, setTicker] = useState("AAPL");
-  const [strategy, setStrategy] = useState("MA_CROSSOVER");
-  const [params, setParams] = useState(DEFAULT_PARAMS.MA_CROSSOVER);
+  const [strategy, setStrategy] = useState<StrategyName>("MA_CROSSOVER");
+  const [params, setParams] = useState<StrategyParams>(DEFAULT_PARAMS.MA_CROSSOVER);
   const [startingCapital, setStartingCapital] = useState(10000);
-  const [timeframe, setTimeframe] = useState("3Y");
+  const [timeframe, setTimeframe] = useState<Timeframe>("3Y");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<BacktestResult | null>(null);
 
   const tickerValid = useMemo(() => isValidTicker(ticker, assetType), [ticker, assetType]);
 
-  function handleAssetTypeChange(nextType) {
+  function handleAssetTypeChange(nextType: AssetType) {
     setAssetType(nextType);
     const nextUniverse = universeFor(nextType);
     setTicker(nextUniverse[0]);
@@ -30,12 +31,12 @@ export default function App() {
     setError("");
   }
 
-  function handleStrategyChange(nextStrategy) {
+  function handleStrategyChange(nextStrategy: StrategyName) {
     setStrategy(nextStrategy);
     setParams(DEFAULT_PARAMS[nextStrategy]);
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tickerValid) {
       setError("Enter a ticker from the selected universe.");
@@ -58,14 +59,14 @@ export default function App() {
           timeframe,
         }),
       });
-      const payload = await response.json();
+      const payload = (await response.json()) as BacktestResult & ApiError;
       if (!response.ok) {
         throw new Error(payload.error || "Backtest failed.");
       }
       setResult(payload);
     } catch (err) {
       setResult(null);
-      setError(err.message || "Unable to run backtest.");
+      setError(err instanceof Error ? err.message : "Unable to run backtest.");
     } finally {
       setLoading(false);
     }
