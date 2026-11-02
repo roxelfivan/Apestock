@@ -1,31 +1,48 @@
-import { SMA, RSI } from "technicalindicators";
+import type { Request, Response } from "express";
+import { RSI, SMA } from "technicalindicators";
 import { DataError, fetchHistoricalData } from "../services/dataService.js";
+import type {
+  AssetType,
+  BacktestRequest,
+  BacktestResult,
+  EquityPoint,
+  OhlcBar,
+  Signal,
+  StrategyName,
+  StrategyParams,
+  Timeframe,
+} from "../types.js";
 
-const STRATEGIES = new Set(["MA_CROSSOVER", "RSI"]);
-const ASSET_TYPES = new Set(["STOCK", "CRYPTO"]);
-const TIMEFRAMES = {
+const STRATEGIES = new Set<StrategyName>(["MA_CROSSOVER", "RSI"]);
+const ASSET_TYPES = new Set<AssetType>(["STOCK", "CRYPTO"]);
+const TIMEFRAMES: Record<Timeframe, number> = {
   "1Y": 365,
   "3Y": 365 * 3,
   "5Y": 365 * 5,
 };
 
 export class ValidationError extends Error {
-  constructor(message) {
+  status = 400;
+
+  constructor(message: string) {
     super(message);
     this.name = "ValidationError";
-    this.status = 400;
   }
 }
 
-function round(value, digits = 2) {
+function round(value: number, digits = 2): number {
   return Number(value.toFixed(digits));
 }
 
-function timeframeToRange(timeframe = "3Y") {
-  const days = TIMEFRAMES[timeframe];
-  if (!days) {
+function isTimeframe(value: string): value is Timeframe {
+  return value === "1Y" || value === "3Y" || value === "5Y";
+}
+
+function timeframeToRange(timeframe: string = "3Y"): { startDate: string; endDate: string } {
+  if (!isTimeframe(timeframe)) {
     throw new ValidationError("timeframe must be one of 1Y, 3Y, or 5Y.");
   }
+  const days = TIMEFRAMES[timeframe];
   const end = new Date();
   const start = new Date(end);
   start.setUTCDate(start.getUTCDate() - days);
@@ -35,16 +52,20 @@ function timeframeToRange(timeframe = "3Y") {
   };
 }
 
-function padIndicator(values, length) {
+function padIndicator(values: number[], length: number): Array<number | null> {
   const offset = length - values.length;
-  const padded = Array(length).fill(null);
+  const padded: Array<number | null> = Array(length).fill(null);
   for (let i = 0; i < values.length; i += 1) {
     padded[offset + i] = values[i];
   }
   return padded;
 }
 
-function computeSignals(bars, strategy, params) {
+function computeSignals(
+  bars: OhlcBar[],
+  strategy: StrategyName,
+  params: StrategyParams,
+): { signals: Signal[]; minBars: number } {
   const closes = bars.map((bar) => bar.close);
 
   if (strategy === "MA_CROSSOVER") {
@@ -59,7 +80,7 @@ function computeSignals(bars, strategy, params) {
 
     const shortSma = padIndicator(SMA.calculate({ period: shortPeriod, values: closes }), bars.length);
     const longSma = padIndicator(SMA.calculate({ period: longPeriod, values: closes }), bars.length);
-    const signals = Array(bars.length).fill("HOLD");
+    const signals: Signal[] = Array(bars.length).fill("HOLD");
 
     for (let i = 1; i < bars.length; i += 1) {
       const prevShort = shortSma[i - 1];
@@ -67,8 +88,8 @@ function computeSignals(bars, strategy, params) {
       const short = shortSma[i];
       const long = longSma[i];
       if ([prevShort, prevLong, short, long].some((value) => value == null)) continue;
-      if (prevShort <= prevLong && short > long) signals[i] = "BUY";
-      else if (prevShort >= prevLong && short < long) signals[i] = "SELL";
+      if (prevShort! <= prevLong! && short! > long!) signals[i] = "BUY";
+      else if (prevShort! >= prevLong! && short! < long!) signals[i] = "SELL";
     }
 
     return { signals, minBars: longPeriod + 1 };
@@ -90,7 +111,7 @@ function computeSignals(bars, strategy, params) {
   }
 
   const rsi = padIndicator(RSI.calculate({ period: rsiPeriod, values: closes }), bars.length);
-  const signals = Array(bars.length).fill("HOLD");
+  const signals: Signal[] = Array(bars.length).fill("HOLD");
 
   for (let i = 1; i < bars.length; i += 1) {
     const prev = rsi[i - 1];
@@ -103,13 +124,13 @@ function computeSignals(bars, strategy, params) {
   return { signals, minBars: rsiPeriod + 2 };
 }
 
-function runEngine(bars, signals, startingCapital) {
+function runEngine(bars: OhlcBar[], signals: Signal[], startingCapital: number): BacktestResult {
   let cash = startingCapital;
   let shares = 0;
-  let pending = null;
-  const trades = [];
-  let entryPrice = null;
-  const equityCurve = [];
+  let pending: Signal | null = null;
+  const trades: Array<{ pnl: number }> = [];
+  let entryPrice: number | null = null;
+  const equityCurve: EquityPoint[] = [];
 
   const firstOpen = bars[0].open;
   const benchmarkShares = startingCapital / firstOpen;
@@ -178,23 +199,32 @@ function runEngine(bars, signals, startingCapital) {
   };
 }
 
-export async function runBacktest(req, res) {
+function httpStatus(error: unknown): number {
+  if (error instanceof ValidationError || error instanceof DataError) return error.status;
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = Number((error as { status?: unknown }).status);
+    if (Number.isFinite(status) && status >= 400) return status;
+  }
+  return 500;
+}
+
+export async function runBacktest(req: Request, res: Response): Promise<Response> {
   try {
-    const body = req.body || {};
+    const body = (req.body ?? {}) as BacktestRequest;
     const ticker = typeof body.ticker === "string" ? body.ticker.trim().toUpperCase() : "";
     const assetType = body.assetType;
     const strategy = body.strategy;
-    const params = body.params || {};
+    const params = body.params ?? {};
     const startingCapital = Number(body.startingCapital);
     const timeframe = body.timeframe || "3Y";
 
     if (!ticker) {
       throw new ValidationError("Missing ticker.");
     }
-    if (!ASSET_TYPES.has(assetType)) {
+    if (!ASSET_TYPES.has(assetType as AssetType)) {
       throw new ValidationError("assetType must be STOCK or CRYPTO.");
     }
-    if (!STRATEGIES.has(strategy)) {
+    if (!STRATEGIES.has(strategy as StrategyName)) {
       throw new ValidationError("strategy must be MA_CROSSOVER or RSI.");
     }
     if (!Number.isFinite(startingCapital) || startingCapital <= 0) {
@@ -202,8 +232,8 @@ export async function runBacktest(req, res) {
     }
 
     const { startDate, endDate } = timeframeToRange(timeframe);
-    const bars = await fetchHistoricalData(ticker, assetType, startDate, endDate);
-    const { signals, minBars } = computeSignals(bars, strategy, params);
+    const bars = await fetchHistoricalData(ticker, assetType as AssetType, startDate, endDate);
+    const { signals, minBars } = computeSignals(bars, strategy as StrategyName, params);
 
     if (bars.length < minBars) {
       throw new ValidationError(
@@ -214,11 +244,11 @@ export async function runBacktest(req, res) {
     const result = runEngine(bars, signals, startingCapital);
     return res.json(result);
   } catch (error) {
-    const status = error.status || (error instanceof DataError ? 400 : 500);
-    const message = error.message || "Backtest failed.";
+    const status = httpStatus(error);
+    const message = error instanceof Error ? error.message : "Backtest failed.";
     if (status >= 500) {
       console.error(error);
     }
-    return res.status(status >= 400 ? status : 500).json({ error: message });
+    return res.status(status).json({ error: message });
   }
 }

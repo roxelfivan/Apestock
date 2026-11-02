@@ -4,8 +4,8 @@ MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a No
 
 ## Stack
 
-- Frontend: React (Vite), Tailwind CSS, Recharts
-- Backend: Express, `yahoo-finance2`, `technicalindicators`
+- Frontend: React + TypeScript (Vite), Tailwind CSS, Recharts
+- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, `technicalindicators`)
 
 ## Universe
 

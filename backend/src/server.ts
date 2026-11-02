@@ -1,5 +1,5 @@
 import cors from "cors";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import { runBacktest } from "./controllers/backtestController.js";
 
 const app = express();
@@ -14,10 +14,12 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/backtest", runBacktest);
 
-app.use((err, _req, res, _next) => {
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ error: err.message || "Internal server error." });
-});
+  res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error." });
+};
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Apestock backend listening on http://localhost:${PORT}`);

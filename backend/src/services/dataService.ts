@@ -1,14 +1,15 @@
 import YahooFinance from "yahoo-finance2";
+import type { AssetType, OhlcBar } from "../types.js";
 
 const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey", "ripHistorical"],
 });
 
-function isFiniteNumber(value) {
+function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function toDateString(value) {
+function toDateString(value: unknown): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 10);
   }
@@ -19,14 +20,20 @@ function toDateString(value) {
 }
 
 export class DataError extends Error {
-  constructor(message) {
+  status = 400;
+
+  constructor(message: string) {
     super(message);
     this.name = "DataError";
-    this.status = 400;
   }
 }
 
-export async function fetchHistoricalData(ticker, assetType, startDate, endDate) {
+export async function fetchHistoricalData(
+  ticker: string,
+  _assetType: AssetType,
+  startDate: string,
+  endDate: string,
+): Promise<OhlcBar[]> {
   if (!ticker || typeof ticker !== "string") {
     throw new DataError("Missing ticker.");
   }
@@ -36,7 +43,7 @@ export async function fetchHistoricalData(ticker, assetType, startDate, endDate)
     throw new DataError("Missing ticker.");
   }
 
-  let raw;
+  let raw: unknown;
   try {
     raw = await yahooFinance.historical(symbol, {
       period1: startDate,
@@ -44,7 +51,7 @@ export async function fetchHistoricalData(ticker, assetType, startDate, endDate)
       interval: "1d",
     });
   } catch (error) {
-    const reason = error?.message || "Unknown Yahoo Finance error";
+    const reason = error instanceof Error ? error.message : "Unknown Yahoo Finance error";
     throw new DataError(`Unable to fetch historical data for ${symbol}: ${reason}`);
   }
 
@@ -52,7 +59,7 @@ export async function fetchHistoricalData(ticker, assetType, startDate, endDate)
     throw new DataError(`No historical data returned for ${symbol}.`);
   }
 
-  const bars = raw
+  const bars = (raw as Array<{ date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }>)
     .map((row) => {
       const date = toDateString(row.date);
       const open = Number(row.open);
@@ -68,13 +75,13 @@ export async function fetchHistoricalData(ticker, assetType, startDate, endDate)
       ) {
         return null;
       }
-      return { date, open, high, low, close };
+      return { date, open, high, low, close } satisfies OhlcBar;
     })
-    .filter(Boolean)
+    .filter((bar): bar is OhlcBar => bar !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const unique = [];
-  const seen = new Set();
+  const unique: OhlcBar[] = [];
+  const seen = new Set<string>();
   for (const bar of bars) {
     if (seen.has(bar.date)) continue;
     seen.add(bar.date);
