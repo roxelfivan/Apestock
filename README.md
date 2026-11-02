@@ -39,6 +39,38 @@ npm run dev
 
 Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
 
+## Deploy on Vercel (frontend + API together)
+
+Vercel is not a long-running Node host. This repo is set up as **one Vercel project**:
+
+- **Frontend** — Vite builds to `frontend/dist` and is served as static files
+- **Backend** — `POST /api/backtest` and `GET /api/health` are serverless functions in [`api/`](api/) that call the same TypeScript engine as local Express
+
+The UI already calls `/api/backtest` (same origin). Locally Vite proxies that to Express; on Vercel the `/api/*` functions handle it.
+
+### Steps
+
+1. Push this repo to GitHub (already done if you are on the PR branch).
+2. In [Vercel](https://vercel.com) → **Add New** → **Project** → import `Apestock`.
+3. Leave **Root Directory** as the repository root (do not set it to `frontend`).
+4. Framework Preset: **Other** (this repo ships [`vercel.json`](vercel.json)).
+5. Node.js version **22.x** (Hobby is fine; a 3Y backtest is typically under 1s).
+6. Deploy. No env vars are required (Yahoo Finance is unauthenticated).
+
+[`vercel.json`](vercel.json) installs backend + frontend deps, builds the Vite app, and maps `api/backtest.ts` → `/api/backtest`.
+
+```bash
+npm i -g vercel
+vercel
+```
+
+After deploy, open `https://<your-app>.vercel.app` and run a backtest. Check `https://<your-app>.vercel.app/api/health`.
+
+### What not to do
+
+- Do not create two Vercel projects (one for `frontend`, one for `backend`) unless you also set a public API URL and CORS. The current UI has no `VITE_API_URL`; it expects same-origin `/api`.
+- Do not set the Vercel root directory to `frontend/` — the serverless functions would be left out.
+
 ## API
 
 `POST /api/backtest`
