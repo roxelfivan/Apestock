@@ -9,5 +9,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["api", "backend/src"]
+  "include": ["backend/src"]
 }

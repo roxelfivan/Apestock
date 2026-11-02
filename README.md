@@ -41,38 +41,32 @@ npm run dev -w frontend
 
 Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
 
-## Deploy on Vercel (frontend + API together)
+## Deploy on Vercel (one project, two services)
 
-Vercel is not a long-running Node host. This repo is set up as **one Vercel project**:
+[`vercel.json`](vercel.json) defines a **Vercel Services** project:
 
-- **Frontend** — Vite builds to `frontend/dist` and is served as static files
-- **Backend** — `POST /api/backtest` and `GET /api/health` are serverless functions in [`api/`](api/) that call the same TypeScript engine as local Express
+| Service | Directory | Framework | Public path |
+| --- | --- | --- | --- |
+| `frontend` | `frontend/` | Vite | `/` (catch-all) |
+| `backend` | `backend/` | Express (`src/app.ts`) | `/api/*` |
 
-The UI already calls `/api/backtest` (same origin). Locally Vite proxies that to Express; on Vercel the `/api/*` functions handle it.
+The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the Express service (the service still sees `/api/backtest`). There is **no service binding**: the UI is a static SPA, so it cannot use runtime-injected URLs. Bindings are only for server-to-server calls.
 
 ### Steps
 
-1. Push this repo to GitHub (already done if you are on the PR branch).
-2. In [Vercel](https://vercel.com) → **Add New** → **Project** → import `Apestock`.
-3. Leave **Root Directory** as the repository root (do not set it to `frontend`).
-4. Framework Preset: **Other** (this repo ships [`vercel.json`](vercel.json)).
-5. Node.js version **22.x**.
-6. Leave Install / Build / Output as the `vercel.json` defaults (do not paste a custom `npm install --prefix ...` command).
-7. Deploy. No env vars are required (Yahoo Finance is unauthenticated).
+1. Import [Apestock](https://github.com/roxelfivan/Apestock) in [Vercel](https://vercel.com).
+2. Branch: **`main`**. Root Directory: empty (repo root).
+3. Node.js **22.x**. No env vars.
+4. Do not set a custom Install Command.
+5. Deploy.
 
-A previous deploy failed with **exit 254** because Vercel broke `npm install --prefix` into `npm install -`. The repo now uses npm workspaces and Vercel’s default `npm install`.
+Locally you can still run two terminals (`npm start -w apestock-backend` and `npm run dev -w frontend`), or run both services with:
 
 ```bash
-npm i -g vercel
-vercel
+npx vercel dev
 ```
 
-After deploy, open `https://<your-app>.vercel.app` and run a backtest. Check `https://<your-app>.vercel.app/api/health`.
-
-### What not to do
-
-- Do not create two Vercel projects (one for `frontend`, one for `backend`) unless you also set a public API URL and CORS. The current UI has no `VITE_API_URL`; it expects same-origin `/api`.
-- Do not set the Vercel root directory to `frontend/` — the serverless functions would be left out.
+After deploy: `https://<your-app>.vercel.app` and `https://<your-app>.vercel.app/api/health`.
 
 ## API
 
