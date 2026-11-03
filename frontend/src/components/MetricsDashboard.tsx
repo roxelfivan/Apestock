@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 import type { BacktestResult, TradeEvent } from "../types";
+
+const MIN_ZOOM_SPAN = 20;
 
 function formatPct(value: number): string {
   const sign = value > 0 ? "+" : "";
@@ -47,6 +49,51 @@ function eventsOnDate(events: TradeEvent[], date: string): TradeEvent[] {
   return events.filter((event) => event.date === date);
 }
 
+function clampRange(start: number, end: number, length: number): { start: number; end: number } {
+  const last = Math.max(0, length - 1);
+  let nextStart = Math.min(last, Math.max(0, start));
+  let nextEnd = Math.min(last, Math.max(0, end));
+  if (nextEnd < nextStart) {
+    const swap = nextStart;
+    nextStart = nextEnd;
+    nextEnd = swap;
+  }
+  if (nextEnd - nextStart + 1 < Math.min(MIN_ZOOM_SPAN, length)) {
+    nextEnd = Math.min(last, nextStart + MIN_ZOOM_SPAN - 1);
+    nextStart = Math.max(0, nextEnd - MIN_ZOOM_SPAN + 1);
+  }
+  return { start: Math.round(nextStart), end: Math.round(nextEnd) };
+}
+
+function zoomRange(
+  start: number,
+  end: number,
+  length: number,
+  factor: number,
+  anchor: number,
+): { start: number; end: number } {
+  const span = Math.max(1, end - start + 1);
+  const nextSpan = Math.max(Math.min(MIN_ZOOM_SPAN, length), Math.min(length, span * factor));
+  const focus = start + anchor * (span - 1);
+  const nextStart = focus - anchor * (nextSpan - 1);
+  return clampRange(nextStart, nextStart + nextSpan - 1, length);
+}
+
+function touchDistance(a: { clientX: number; clientY: number }, b: { clientX: number; clientY: number }): number {
+  const dx = a.clientX - b.clientX;
+  const dy = a.clientY - b.clientY;
+  return Math.hypot(dx, dy);
+}
+
+function touchAnchor(
+  a: { clientX: number },
+  b: { clientX: number },
+  rect: DOMRect,
+): number {
+  const mid = (a.clientX + b.clientX) / 2;
+  return Math.min(1, Math.max(0, (mid - rect.left) / Math.max(rect.width, 1)));
+}
+
 interface MetricCardProps {
   label: string;
   value: string;
@@ -66,12 +113,12 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
 
 function BuyMark({ cx, cy }: { cx?: number; cy?: number }) {
   if (cx == null || cy == null || !Number.isFinite(cx) || !Number.isFinite(cy)) return null;
-  return <polygon points={`${cx},${cy - 5} ${cx - 3.5},${cy + 1} ${cx + 3.5},${cy + 1}`} fill="#34d399" />;
+  return <polygon points={`${cx},${cy - 6} ${cx - 4},${cy + 1} ${cx + 4},${cy + 1}`} fill="#34d399" />;
 }
 
 function SellMark({ cx, cy }: { cx?: number; cy?: number }) {
   if (cx == null || cy == null || !Number.isFinite(cx) || !Number.isFinite(cy)) return null;
-  return <polygon points={`${cx},${cy + 5} ${cx - 3.5},${cy - 1} ${cx + 3.5},${cy - 1}`} fill="#f43f5e" />;
+  return <polygon points={`${cx},${cy + 6} ${cx - 4},${cy - 1} ${cx + 4},${cy - 1}`} fill="#f43f5e" />;
 }
 
 interface MetricsDashboardProps {
@@ -79,42 +126,134 @@ interface MetricsDashboardProps {
 }
 
 export default function MetricsDashboard({ result }: MetricsDashboardProps) {
-  const view = useMemo(() => {
-    if (!result) return null;
+  const chartRef = useRef<HTMLDivElement>(null);
+  const rangeRef = useRef({ start: 0, end: 0 });
+  const pinchRef = useRef<{ distance: number; start: number; end: number } | null>(null);
+  const lastTapRef = useRef(0);
+  const [range, setRange] = useState({ start: 0, end: 0 });
+
+  const chartData = useMemo(() => {
+    if (!result) return [];
     const events = result.events ?? [];
     const basePortfolio = result.equityCurve[0]?.portfolioValue || 1;
     const baseBenchmark = result.equityCurve[0]?.benchmarkValue || 1;
 
-    const points = result.equityCurve.map((point) => {
+    return result.equityCurve.map((point) => {
       const dayEvents = eventsOnDate(events, point.date);
+      const portfolioPct = ((point.portfolioValue / basePortfolio) - 1) * 100;
+      const hasBuy = dayEvents.some((event) => event.side === "BUY");
+      const hasSell = dayEvents.some((event) => event.side === "SELL");
       return {
         date: point.date,
         portfolioValue: point.portfolioValue,
         benchmarkValue: point.benchmarkValue,
-        portfolioPct: ((point.portfolioValue / basePortfolio) - 1) * 100,
+        portfolioPct,
         benchmarkPct: ((point.benchmarkValue / baseBenchmark) - 1) * 100,
-        hasBuy: dayEvents.some((event) => event.side === "BUY"),
-        hasSell: dayEvents.some((event) => event.side === "SELL"),
+        hasBuy,
+        hasSell,
+        buyMark: hasBuy ? portfolioPct : null,
+        sellMark: hasSell ? portfolioPct : null,
       };
     });
-
-    const strategyDomain = paddedDomain(points.map((point) => point.portfolioPct));
-    const benchmarkDomain = paddedDomain(points.map((point) => point.benchmarkPct));
-    const markY = strategyDomain[0];
-
-    return {
-      ...result,
-      strategyDomain,
-      benchmarkDomain,
-      chartData: points.map((point) => ({
-        ...point,
-        buyMark: point.hasBuy ? markY : null,
-        sellMark: point.hasSell ? markY : null,
-      })),
-    };
   }, [result]);
 
-  if (!result || !view) {
+  useEffect(() => {
+    const next = { start: 0, end: Math.max(0, chartData.length - 1) };
+    rangeRef.current = next;
+    setRange(next);
+  }, [chartData]);
+
+  useEffect(() => {
+    rangeRef.current = range;
+  }, [range]);
+
+  const visible = useMemo(() => {
+    if (chartData.length === 0) return [];
+    return chartData.slice(range.start, range.end + 1);
+  }, [chartData, range]);
+
+  const strategyDomain = useMemo(
+    () => paddedDomain(visible.map((point) => point.portfolioPct)),
+    [visible],
+  );
+  const benchmarkDomain = useMemo(
+    () => paddedDomain(visible.map((point) => point.benchmarkPct)),
+    [visible],
+  );
+
+  const isZoomed = range.start > 0 || range.end < Math.max(0, chartData.length - 1);
+
+  function applyZoom(factor: number, anchor: number) {
+    if (chartData.length === 0) return;
+    const current = rangeRef.current;
+    const next = zoomRange(current.start, current.end, chartData.length, factor, anchor);
+    rangeRef.current = next;
+    setRange(next);
+  }
+
+  function resetZoom() {
+    const next = { start: 0, end: Math.max(0, chartData.length - 1) };
+    rangeRef.current = next;
+    setRange(next);
+  }
+
+  useEffect(() => {
+    const node = chartRef.current;
+    if (!node) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (chartData.length === 0) return;
+      event.preventDefault();
+      const rect = node.getBoundingClientRect();
+      const anchor = Math.min(1, Math.max(0, (event.clientX - rect.left) / Math.max(rect.width, 1)));
+      applyZoom(event.deltaY > 0 ? 1.18 : 0.82, anchor);
+    };
+
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, [chartData.length]);
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (event.touches.length === 2) {
+      pinchRef.current = {
+        distance: touchDistance(event.touches[0], event.touches[1]),
+        start: rangeRef.current.start,
+        end: rangeRef.current.end,
+      };
+      return;
+    }
+    if (event.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTapRef.current < 280) {
+        resetZoom();
+      }
+      lastTapRef.current = now;
+    }
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    if (event.touches.length !== 2 || !pinchRef.current || !chartRef.current) return;
+    event.preventDefault();
+    const currentDistance = touchDistance(event.touches[0], event.touches[1]);
+    if (pinchRef.current.distance < 8) return;
+    const factor = pinchRef.current.distance / currentDistance;
+    const rect = chartRef.current.getBoundingClientRect();
+    const next = zoomRange(
+      pinchRef.current.start,
+      pinchRef.current.end,
+      chartData.length,
+      factor,
+      touchAnchor(event.touches[0], event.touches[1], rect),
+    );
+    rangeRef.current = next;
+    setRange(next);
+  }
+
+  function handleTouchEnd() {
+    pinchRef.current = null;
+  }
+
+  if (!result) {
     return (
       <section className="flex min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
         <div>
@@ -127,7 +266,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
     );
   }
 
-  const { totalReturn, maxDrawdown, winRate, totalTrades, chartData, strategyDomain, benchmarkDomain } = view;
+  const { totalReturn, maxDrawdown, winRate, totalTrades } = result;
 
   return (
     <section className="space-y-4">
@@ -169,11 +308,29 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-0 border-x-[3.5px] border-x-transparent border-t-[6px] border-t-rose-500" /> Sell
             </span>
+            {isZoomed ? (
+              <button
+                type="button"
+                onClick={resetZoom}
+                className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300"
+              >
+                Reset zoom
+              </button>
+            ) : (
+              <span>Scroll or pinch to zoom</span>
+            )}
           </div>
         </div>
-        <div className="h-[360px] w-full touch-manipulation">
+        <div
+          ref={chartRef}
+          className="h-[360px] w-full touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        >
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
+            <ComposedChart data={visible} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -211,7 +368,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 cursor={{ stroke: "#64748b", strokeWidth: 1 }}
                 content={({ active, label }) => {
                   if (!active || label == null) return null;
-                  const point = chartData.find((row) => row.date === String(label));
+                  const point = visible.find((row) => row.date === String(label));
                   if (!point) return null;
                   return (
                     <div className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-[10px] leading-4 text-slate-100 shadow-lg">
@@ -258,9 +415,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 stroke="none"
                 legendType="none"
                 tooltipType="none"
-                dot={(props) =>
-                  props.value == null ? <g /> : <BuyMark cx={props.cx} cy={props.cy} />
-                }
+                dot={(props) => (props.value == null ? <g /> : <BuyMark cx={props.cx} cy={props.cy} />)}
                 activeDot={false}
                 isAnimationActive={false}
               />
@@ -271,9 +426,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 stroke="none"
                 legendType="none"
                 tooltipType="none"
-                dot={(props) =>
-                  props.value == null ? <g /> : <SellMark cx={props.cx} cy={props.cy} />
-                }
+                dot={(props) => (props.value == null ? <g /> : <SellMark cx={props.cx} cy={props.cy} />)}
                 activeDot={false}
                 isAnimationActive={false}
               />
