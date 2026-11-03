@@ -5,6 +5,18 @@ const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey", "ripHistorical"],
 });
 
+/** In-process cache only: reuse Yahoo bars for repeat backtests of the same window. */
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 256;
+
+interface CacheEntry {
+  bars: OhlcBar[];
+  expiresAt: number;
+}
+
+const priceCache = new Map<string, CacheEntry>();
+const inflight = new Map<string, Promise<OhlcBar[]>>();
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -19,6 +31,35 @@ function toDateString(value: unknown): string | null {
   return null;
 }
 
+function cloneBars(bars: OhlcBar[]): OhlcBar[] {
+  return bars.map((bar) => ({ ...bar }));
+}
+
+function cacheKey(symbol: string, startDate: string, endDate: string): string {
+  return `${symbol}|${startDate}|${endDate}|1d`;
+}
+
+function readCache(key: string): OhlcBar[] | null {
+  const entry = priceCache.get(key);
+  if (!entry) return null;
+  if (Date.now() >= entry.expiresAt) {
+    priceCache.delete(key);
+    return null;
+  }
+  priceCache.delete(key);
+  priceCache.set(key, entry);
+  return cloneBars(entry.bars);
+}
+
+function writeCache(key: string, bars: OhlcBar[]): void {
+  while (priceCache.size >= CACHE_MAX_ENTRIES) {
+    const oldest = priceCache.keys().next().value;
+    if (oldest === undefined) break;
+    priceCache.delete(oldest);
+  }
+  priceCache.set(key, { bars: cloneBars(bars), expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
 export class DataError extends Error {
   status = 400;
 
@@ -28,21 +69,7 @@ export class DataError extends Error {
   }
 }
 
-export async function fetchHistoricalData(
-  ticker: string,
-  _assetType: AssetType,
-  startDate: string,
-  endDate: string,
-): Promise<OhlcBar[]> {
-  if (!ticker || typeof ticker !== "string") {
-    throw new DataError("Missing ticker.");
-  }
-
-  const symbol = ticker.trim().toUpperCase();
-  if (!symbol) {
-    throw new DataError("Missing ticker.");
-  }
-
+async function downloadHistoricalData(symbol: string, startDate: string, endDate: string): Promise<OhlcBar[]> {
   let raw: unknown;
   try {
     raw = await yahooFinance.historical(symbol, {
@@ -93,4 +120,39 @@ export async function fetchHistoricalData(
   }
 
   return unique;
+}
+
+export async function fetchHistoricalData(
+  ticker: string,
+  _assetType: AssetType,
+  startDate: string,
+  endDate: string,
+): Promise<OhlcBar[]> {
+  if (!ticker || typeof ticker !== "string") {
+    throw new DataError("Missing ticker.");
+  }
+
+  const symbol = ticker.trim().toUpperCase();
+  if (!symbol) {
+    throw new DataError("Missing ticker.");
+  }
+
+  const key = cacheKey(symbol, startDate, endDate);
+  const cached = readCache(key);
+  if (cached) return cached;
+
+  const pending = inflight.get(key);
+  if (pending) return cloneBars(await pending);
+
+  const request = downloadHistoricalData(symbol, startDate, endDate)
+    .then((bars) => {
+      writeCache(key, bars);
+      return bars;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
+
+  inflight.set(key, request);
+  return cloneBars(await request);
 }
