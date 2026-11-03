@@ -15,6 +15,12 @@ function formatPct(value: number): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatAxisPct(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(0)}%`;
+}
+
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -45,11 +51,13 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
   );
 }
 
-function BuyMark({ cx = 0, cy = 0 }: { cx?: number; cy?: number }) {
+function BuyMark({ cx, cy }: { cx?: number; cy?: number }) {
+  if (cx == null || cy == null || !Number.isFinite(cx) || !Number.isFinite(cy)) return null;
   return <polygon points={`${cx},${cy - 5} ${cx - 3.5},${cy + 1} ${cx + 3.5},${cy + 1}`} fill="#34d399" />;
 }
 
-function SellMark({ cx = 0, cy = 0 }: { cx?: number; cy?: number }) {
+function SellMark({ cx, cy }: { cx?: number; cy?: number }) {
+  if (cx == null || cy == null || !Number.isFinite(cx) || !Number.isFinite(cy)) return null;
   return <polygon points={`${cx},${cy + 5} ${cx - 3.5},${cy - 1} ${cx + 3.5},${cy - 1}`} fill="#f43f5e" />;
 }
 
@@ -77,14 +85,27 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
 
   const { totalReturn, maxDrawdown, winRate, totalTrades, equityCurve } = result;
   const events = result.events ?? [];
+  const basePortfolio = equityCurve[0]?.portfolioValue || 1;
+  const baseBenchmark = equityCurve[0]?.benchmarkValue || 1;
+
   const chartData = equityCurve.map((point) => {
     const dayEvents = eventsOnDate(events, point.date);
+    const portfolioPct = ((point.portfolioValue / basePortfolio) - 1) * 100;
+    const benchmarkPct = ((point.benchmarkValue / baseBenchmark) - 1) * 100;
     return {
-      ...point,
-      buyMark: dayEvents.some((event) => event.side === "BUY") ? 0 : null,
-      sellMark: dayEvents.some((event) => event.side === "SELL") ? 0 : null,
+      date: point.date,
+      portfolioValue: point.portfolioValue,
+      benchmarkValue: point.benchmarkValue,
+      portfolioPct,
+      benchmarkPct,
+      hasBuy: dayEvents.some((event) => event.side === "BUY"),
+      hasSell: dayEvents.some((event) => event.side === "SELL"),
     };
   });
+
+  const markY = Math.min(...chartData.flatMap((point) => [point.portfolioPct, point.benchmarkPct]));
+  const buyDots = chartData.filter((point) => point.hasBuy).map((point) => ({ date: point.date, mark: markY }));
+  const sellDots = chartData.filter((point) => point.hasSell).map((point) => ({ date: point.date, mark: markY }));
 
   return (
     <section className="space-y-4">
@@ -108,12 +129,12 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
       </div>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-        <div className="mb-3 flex items-end justify-between">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Equity</p>
             <h3 className="text-base font-semibold text-white">Strategy vs buy & hold</h3>
           </div>
-          <div className="flex items-center gap-4 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-4 rounded bg-blue-500" /> Portfolio
             </span>
@@ -130,7 +151,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
         </div>
         <div className="h-[360px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 10 }}>
+            <ComposedChart data={chartData} margin={{ top: 12, right: 8, left: 4, bottom: 8 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -140,55 +161,69 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 tickLine={false}
               />
               <YAxis
-                yAxisId="value"
                 tick={{ fill: "#94a3b8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value: number) => formatMoney(value)}
-                width={72}
+                tickFormatter={formatAxisPct}
+                width={48}
+                domain={["auto", "auto"]}
               />
-              <YAxis yAxisId="events" hide domain={[-0.08, 1]} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  const point = payload[0]?.payload as {
-                    portfolioValue: number;
-                    benchmarkValue: number;
-                    buyMark: number | null;
-                    sellMark: number | null;
-                  };
+                  const point = payload[0]?.payload as (typeof chartData)[number];
                   return (
                     <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100">
                       <p className="mb-1 font-medium text-slate-300">{String(label)}</p>
-                      <p>Portfolio {formatMoney(toNumber(point.portfolioValue))}</p>
-                      <p>Benchmark {formatMoney(toNumber(point.benchmarkValue))}</p>
-                      {point.buyMark != null ? <p className="text-emerald-400">Buy fill</p> : null}
-                      {point.sellMark != null ? <p className="text-rose-400">Sell fill</p> : null}
+                      <p>
+                        Portfolio {formatPct(toNumber(point.portfolioPct))} ({formatMoney(toNumber(point.portfolioValue))})
+                      </p>
+                      <p>
+                        Benchmark {formatPct(toNumber(point.benchmarkPct))} ({formatMoney(toNumber(point.benchmarkValue))})
+                      </p>
+                      {point.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
+                      {point.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
                     </div>
                   );
                 }}
               />
               <Line
-                yAxisId="value"
                 type="monotone"
-                dataKey="portfolioValue"
+                dataKey="portfolioPct"
                 name="Portfolio"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 dot={false}
+                isAnimationActive={false}
               />
               <Line
-                yAxisId="value"
                 type="monotone"
-                dataKey="benchmarkValue"
+                dataKey="benchmarkPct"
                 name="Benchmark"
                 stroke="#94a3b8"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
+                isAnimationActive={false}
               />
-              <Scatter yAxisId="events" dataKey="buyMark" name="Buy" fill="#34d399" shape={<BuyMark />} />
-              <Scatter yAxisId="events" dataKey="sellMark" name="Sell" fill="#f43f5e" shape={<SellMark />} />
+              <Scatter
+                data={buyDots}
+                dataKey="mark"
+                name="Buy"
+                fill="#34d399"
+                shape={<BuyMark />}
+                isAnimationActive={false}
+                legendType="none"
+              />
+              <Scatter
+                data={sellDots}
+                dataKey="mark"
+                name="Sell"
+                fill="#f43f5e"
+                shape={<SellMark />}
+                isAnimationActive={false}
+                legendType="none"
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
