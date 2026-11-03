@@ -55,7 +55,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
         <div>
           <p className="text-sm font-medium text-slate-300">No backtest yet</p>
           <p className="mt-1 text-sm text-slate-500">
-            Choose an S&P 100 name or crypto pair, set the strategy, and run a daily EOD simulation.
+            Choose a top-50 S&P, Nasdaq, or US ETF name, or a crypto pair, then run a daily EOD simulation.
           </p>
         </div>
       </section>

@@ -80,7 +80,8 @@ export default function App() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              S&P 100 and top-50 crypto, EOD Yahoo data, MA crossover or RSI. Signals fire on the close;
+              Top 50 S&P, Nasdaq, and US ETFs plus top-50 crypto. EOD Yahoo data, MA crossover or RSI.
+              Signals fire on the close;
               fills happen at the next open.
             </p>
           </div>
