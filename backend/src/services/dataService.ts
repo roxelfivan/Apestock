@@ -69,41 +69,45 @@ export class DataError extends Error {
   }
 }
 
+function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }): OhlcBar | null {
+  const date = toDateString(row.date);
+  const open = Number(row.open);
+  const high = Number(row.high);
+  const low = Number(row.low);
+  const close = Number(row.close);
+  if (
+    !date ||
+    !isFiniteNumber(open) ||
+    !isFiniteNumber(high) ||
+    !isFiniteNumber(low) ||
+    !isFiniteNumber(close)
+  ) {
+    return null;
+  }
+  return { date, open, high, low, close };
+}
+
 async function downloadHistoricalData(symbol: string, startDate: string, endDate: string): Promise<OhlcBar[]> {
-  let raw: unknown;
+  let quotes: Array<{ date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }>;
   try {
-    raw = await yahooFinance.historical(symbol, {
+    const result = await yahooFinance.chart(symbol, {
       period1: startDate,
       period2: endDate,
       interval: "1d",
+      return: "array",
     });
+    quotes = result.quotes ?? [];
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Unknown Yahoo Finance error";
     throw new DataError(`Unable to fetch historical data for ${symbol}: ${reason}`);
   }
 
-  if (!Array.isArray(raw) || raw.length === 0) {
+  if (quotes.length === 0) {
     throw new DataError(`No historical data returned for ${symbol}.`);
   }
 
-  const bars = (raw as Array<{ date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }>)
-    .map((row) => {
-      const date = toDateString(row.date);
-      const open = Number(row.open);
-      const high = Number(row.high);
-      const low = Number(row.low);
-      const close = Number(row.close);
-      if (
-        !date ||
-        !isFiniteNumber(open) ||
-        !isFiniteNumber(high) ||
-        !isFiniteNumber(low) ||
-        !isFiniteNumber(close)
-      ) {
-        return null;
-      }
-      return { date, open, high, low, close } satisfies OhlcBar;
-    })
+  const bars = quotes
+    .map(toOhlcBar)
     .filter((bar): bar is OhlcBar => bar !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
