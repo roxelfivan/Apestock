@@ -1,6 +1,6 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
-import { runBacktest } from "./controllers/backtestController.js";
+import { getUniverse, runBacktest, runSweep, runWalkForward } from "./controllers/backtestController.js";
 
 const app = express();
 
@@ -12,6 +12,9 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/backtest", runBacktest);
+app.post("/api/backtest/sweep", runSweep);
+app.post("/api/backtest/walk-forward", runWalkForward);
+app.get("/api/universe", getUniverse);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);

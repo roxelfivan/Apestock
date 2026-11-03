@@ -5,8 +5,10 @@ import { isValidTicker, universeFor, universeGroups } from "../data/universes";
 interface AssetSelectorProps {
   assetType: AssetType;
   ticker: string;
+  allowAnySymbol: boolean;
   onAssetTypeChange: (assetType: AssetType) => void;
   onTickerChange: (ticker: string) => void;
+  onAllowAnySymbolChange: (value: boolean) => void;
 }
 
 interface FlatOption {
@@ -18,8 +20,10 @@ interface FlatOption {
 export default function AssetSelector({
   assetType,
   ticker,
+  allowAnySymbol,
   onAssetTypeChange,
   onTickerChange,
+  onAllowAnySymbolChange,
 }: AssetSelectorProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -33,7 +37,7 @@ export default function AssetSelector({
   const universe = universeFor(assetType);
   const groups = universeGroups(assetType);
   const normalized = ticker.trim().toUpperCase();
-  const valid = !normalized || isValidTicker(normalized, assetType);
+  const valid = allowAnySymbol || !normalized || isValidTicker(normalized, assetType);
   const query = normalized;
 
   if (assetType !== seenType) {
@@ -273,10 +277,21 @@ export default function AssetSelector({
           </ul>
         ) : null}
       </div>
+      <label className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+        <input
+          type="checkbox"
+          checked={allowAnySymbol}
+          onChange={(event) => onAllowAnySymbolChange(event.target.checked)}
+          className="rounded border-slate-600 bg-slate-950 text-emerald-400"
+        />
+        Allow any Yahoo symbol (not just the curated list)
+      </label>
       <p className={`mt-2 text-xs ${valid ? "text-slate-500" : "text-rose-400"}`}>
-        {valid
-          ? `Type a ticker or pick from the list. Validated against ${universeLabel} names (${universe.length} unique).`
-          : `${normalized} is not in the ${universeLabel} universe.`}
+        {allowAnySymbol
+          ? `Open symbol search. Lists still show ${universeLabel} names (${universe.length} unique) as shortcuts.`
+          : valid
+            ? `Type a ticker or pick from the list. Validated against ${universeLabel} names (${universe.length} unique).`
+            : `${normalized} is not in the ${universeLabel} universe.`}
       </p>
     </section>
   );
