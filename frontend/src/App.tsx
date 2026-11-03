@@ -16,6 +16,7 @@ export default function App() {
   const [strategy, setStrategy] = useState<StrategyName>("MA_CROSSOVER");
   const [params, setParams] = useState<StrategyParams>(DEFAULT_PARAMS.MA_CROSSOVER);
   const [startingCapital, setStartingCapital] = useState(10000);
+  const [tradePercent, setTradePercent] = useState(20);
   const [timeframe, setTimeframe] = useState<Timeframe>("3Y");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -56,6 +57,7 @@ export default function App() {
           strategy,
           params,
           startingCapital,
+          tradePercent,
           timeframe,
         }),
       });
@@ -86,7 +88,7 @@ export default function App() {
             </p>
           </div>
           <div className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400">
-            100% long · no shorting · T+1 open
+            long only · slice per signal · T+1 open
           </div>
         </header>
 
@@ -102,12 +104,14 @@ export default function App() {
               strategy={strategy}
               params={params}
               startingCapital={startingCapital}
+              tradePercent={tradePercent}
               timeframe={timeframe}
               loading={loading}
               tickerValid={tickerValid}
               onStrategyChange={handleStrategyChange}
               onParamsChange={(patch) => setParams((current) => ({ ...current, ...patch }))}
               onStartingCapitalChange={setStartingCapital}
+              onTradePercentChange={setTradePercent}
               onTimeframeChange={setTimeframe}
               onSubmit={handleSubmit}
             />

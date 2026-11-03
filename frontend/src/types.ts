@@ -16,12 +16,18 @@ export interface EquityPoint {
   benchmarkValue: number;
 }
 
+export interface TradeEvent {
+  date: string;
+  side: "BUY" | "SELL";
+}
+
 export interface BacktestResult {
   totalReturn: number;
   maxDrawdown: number;
   winRate: number;
   totalTrades: number;
   equityCurve: EquityPoint[];
+  events: TradeEvent[];
 }
 
 export interface ApiError {

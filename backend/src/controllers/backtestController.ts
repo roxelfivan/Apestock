@@ -11,6 +11,7 @@ import type {
   StrategyName,
   StrategyParams,
   Timeframe,
+  TradeEvent,
 } from "../types.js";
 
 const STRATEGIES = new Set<StrategyName>(["MA_CROSSOVER", "RSI"]);
@@ -124,38 +125,47 @@ function computeSignals(
   return { signals, minBars: rsiPeriod + 2 };
 }
 
-function runEngine(bars: OhlcBar[], signals: Signal[], startingCapital: number): BacktestResult {
+function runEngine(
+  bars: OhlcBar[],
+  signals: Signal[],
+  startingCapital: number,
+  tradePercent: number,
+): BacktestResult {
   let cash = startingCapital;
-  let shares = 0;
+  const lots: Array<{ shares: number; entryPrice: number }> = [];
   let pending: Signal | null = null;
   const trades: Array<{ pnl: number }> = [];
-  let entryPrice: number | null = null;
+  const events: TradeEvent[] = [];
   const equityCurve: EquityPoint[] = [];
+  const slice = startingCapital * (tradePercent / 100);
 
   const firstOpen = bars[0].open;
   const benchmarkShares = startingCapital / firstOpen;
+
+  const openShares = () => lots.reduce((sum, lot) => sum + lot.shares, 0);
 
   for (let i = 0; i < bars.length; i += 1) {
     const bar = bars[i];
 
     if (pending) {
-      if (pending === "BUY" && shares === 0 && cash > 0) {
-        shares = cash / bar.open;
-        cash = 0;
-        entryPrice = bar.open;
-      } else if (pending === "SELL" && shares > 0) {
-        const proceeds = shares * bar.open;
-        const pnl = proceeds - (entryPrice ?? bar.open) * shares;
-        trades.push({ pnl });
-        cash = proceeds;
-        shares = 0;
-        entryPrice = null;
+      if (pending === "BUY" && cash > 0) {
+        const spend = Math.min(cash, slice);
+        if (spend > 0 && bar.open > 0) {
+          lots.push({ shares: spend / bar.open, entryPrice: bar.open });
+          cash -= spend;
+          events.push({ date: bar.date, side: "BUY" });
+        }
+      } else if (pending === "SELL" && lots.length > 0) {
+        const lot = lots.shift()!;
+        const proceeds = lot.shares * bar.open;
+        trades.push({ pnl: proceeds - lot.entryPrice * lot.shares });
+        cash += proceeds;
+        events.push({ date: bar.date, side: "SELL" });
       }
       pending = null;
     }
 
-    const invested = shares * bar.close;
-    const portfolioValue = cash + invested;
+    const portfolioValue = cash + openShares() * bar.close;
     const benchmarkValue = benchmarkShares * bar.close;
     equityCurve.push({
       date: bar.date,
@@ -164,15 +174,17 @@ function runEngine(bars: OhlcBar[], signals: Signal[], startingCapital: number):
     });
 
     if (i < bars.length - 1) {
-      if (signals[i] === "BUY" && shares === 0) pending = "BUY";
-      else if (signals[i] === "SELL" && shares > 0) pending = "SELL";
+      if (signals[i] === "BUY" && cash > 0) pending = "BUY";
+      else if (signals[i] === "SELL" && lots.length > 0) pending = "SELL";
     }
   }
 
-  if (shares > 0) {
+  if (lots.length > 0) {
     const last = bars[bars.length - 1];
-    const proceeds = shares * last.close;
-    trades.push({ pnl: proceeds - (entryPrice ?? last.close) * shares });
+    for (const lot of lots) {
+      trades.push({ pnl: lot.shares * last.close - lot.entryPrice * lot.shares });
+      events.push({ date: last.date, side: "SELL" });
+    }
   }
 
   const finalValue = equityCurve[equityCurve.length - 1].portfolioValue;
@@ -196,6 +208,7 @@ function runEngine(bars: OhlcBar[], signals: Signal[], startingCapital: number):
     winRate: round(winRate),
     totalTrades,
     equityCurve,
+    events,
   };
 }
 
@@ -216,6 +229,7 @@ export async function runBacktest(req: Request, res: Response): Promise<Response
     const strategy = body.strategy;
     const params = body.params ?? {};
     const startingCapital = Number(body.startingCapital);
+    const tradePercent = body.tradePercent == null ? 20 : Number(body.tradePercent);
     const timeframe = body.timeframe || "3Y";
 
     if (!ticker) {
@@ -230,6 +244,9 @@ export async function runBacktest(req: Request, res: Response): Promise<Response
     if (!Number.isFinite(startingCapital) || startingCapital <= 0) {
       throw new ValidationError("startingCapital must be a positive number.");
     }
+    if (!Number.isFinite(tradePercent) || tradePercent < 1 || tradePercent > 100) {
+      throw new ValidationError("tradePercent must be a number from 1 to 100.");
+    }
 
     const { startDate, endDate } = timeframeToRange(timeframe);
     const bars = await fetchHistoricalData(ticker, assetType as AssetType, startDate, endDate);
@@ -241,7 +258,7 @@ export async function runBacktest(req: Request, res: Response): Promise<Response
       );
     }
 
-    const result = runEngine(bars, signals, startingCapital);
+    const result = runEngine(bars, signals, startingCapital, tradePercent);
     return res.json(result);
   } catch (error) {
     const status = httpStatus(error);

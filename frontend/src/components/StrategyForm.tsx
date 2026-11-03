@@ -5,12 +5,14 @@ interface StrategyFormProps {
   strategy: StrategyName;
   params: StrategyParams;
   startingCapital: number;
+  tradePercent: number;
   timeframe: Timeframe;
   loading: boolean;
   tickerValid: boolean;
   onStrategyChange: (strategy: StrategyName) => void;
   onParamsChange: (patch: Partial<StrategyParams>) => void;
   onStartingCapitalChange: (value: number) => void;
+  onTradePercentChange: (value: number) => void;
   onTimeframeChange: (timeframe: Timeframe) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
@@ -19,12 +21,14 @@ export default function StrategyForm({
   strategy,
   params,
   startingCapital,
+  tradePercent,
   timeframe,
   loading,
   tickerValid,
   onStrategyChange,
   onParamsChange,
   onStartingCapitalChange,
+  onTradePercentChange,
   onTimeframeChange,
   onSubmit,
 }: StrategyFormProps) {
@@ -142,6 +146,20 @@ export default function StrategyForm({
           />
         </div>
         <div>
+          <label className="block text-sm font-medium text-slate-300" htmlFor="tradePercent">
+            Size per trade (%)
+          </label>
+          <input
+            id="tradePercent"
+            type="number"
+            min={1}
+            max={100}
+            value={tradePercent}
+            onChange={(event) => onTradePercentChange(Number(event.target.value))}
+            className={fieldClass}
+          />
+        </div>
+        <div className="col-span-2">
           <label className="block text-sm font-medium text-slate-300" htmlFor="timeframe">
             Timeframe
           </label>

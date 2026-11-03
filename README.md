@@ -17,7 +17,7 @@ MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a No
 - **MA_CROSSOVER** — buy when the short SMA crosses above the long SMA; sell on a cross below
 - **RSI** — buy when RSI crosses up through the oversold threshold; sell when it crosses down through overbought
 
-Signals are computed on day **T close**. Orders fill on day **T+1 open**. Position sizing is all-in / all-out long only (no shorts).
+Signals are computed on day **T close**. Orders fill on day **T+1 open**. Sizing is long-only (no shorts): each BUY spends `tradePercent` of starting capital (default 20%); each SELL closes the oldest lot (FIFO). Extra signals still fill while cash or lots remain.
 
 ## Run locally
 
@@ -79,10 +79,11 @@ After deploy: `https://<your-app>.vercel.app` and `https://<your-app>.vercel.app
   "strategy": "MA_CROSSOVER",
   "params": { "shortPeriod": 50, "longPeriod": 200 },
   "startingCapital": 10000,
+  "tradePercent": 20,
   "timeframe": "3Y"
 }
 ```
 
-RSI example params: `{ "rsiPeriod": 14, "oversold": 30, "overbought": 70 }`. Timeframe is `1Y`, `3Y`, or `5Y`.
+RSI example params: `{ "rsiPeriod": 14, "oversold": 30, "overbought": 70 }`. Timeframe is `1Y`, `3Y`, or `5Y`. `tradePercent` defaults to 20. The response includes `events` (`{ date, side: "BUY" | "SELL" }`) at fill dates for the equity chart.
 
 Missing tickers and data gaps return HTTP **400** with `{ "error": "..." }`.

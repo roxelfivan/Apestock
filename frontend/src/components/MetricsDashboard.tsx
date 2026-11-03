@@ -1,13 +1,14 @@
 import {
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import type { BacktestResult } from "../types";
+import type { BacktestResult, TradeEvent } from "../types";
 
 function formatPct(value: number): string {
   const sign = value > 0 ? "+" : "";
@@ -44,6 +45,18 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
   );
 }
 
+function BuyMark({ cx = 0, cy = 0 }: { cx?: number; cy?: number }) {
+  return <polygon points={`${cx},${cy - 5} ${cx - 3.5},${cy + 1} ${cx + 3.5},${cy + 1}`} fill="#34d399" />;
+}
+
+function SellMark({ cx = 0, cy = 0 }: { cx?: number; cy?: number }) {
+  return <polygon points={`${cx},${cy + 5} ${cx - 3.5},${cy - 1} ${cx + 3.5},${cy - 1}`} fill="#f43f5e" />;
+}
+
+function eventsOnDate(events: TradeEvent[], date: string): TradeEvent[] {
+  return events.filter((event) => event.date === date);
+}
+
 interface MetricsDashboardProps {
   result: BacktestResult | null;
 }
@@ -63,6 +76,15 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
   }
 
   const { totalReturn, maxDrawdown, winRate, totalTrades, equityCurve } = result;
+  const events = result.events ?? [];
+  const chartData = equityCurve.map((point) => {
+    const dayEvents = eventsOnDate(events, point.date);
+    return {
+      ...point,
+      buyMark: dayEvents.some((event) => event.side === "BUY") ? 0 : null,
+      sellMark: dayEvents.some((event) => event.side === "SELL") ? 0 : null,
+    };
+  });
 
   return (
     <section className="space-y-4">
@@ -98,11 +120,17 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
             <span className="flex items-center gap-1.5">
               <span className="h-px w-4 border-t border-dashed border-slate-400" /> Benchmark
             </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0 w-0 border-x-[3.5px] border-x-transparent border-b-[6px] border-b-emerald-400" /> Buy
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0 w-0 border-x-[3.5px] border-x-transparent border-t-[6px] border-t-rose-500" /> Sell
+            </span>
           </div>
         </div>
         <div className="h-[360px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={equityCurve} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 10 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -112,22 +140,36 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 tickLine={false}
               />
               <YAxis
+                yAxisId="value"
                 tick={{ fill: "#94a3b8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value: number) => formatMoney(value)}
                 width={72}
               />
+              <YAxis yAxisId="events" hide domain={[-0.08, 1]} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "#0f172a",
-                  border: "1px solid #1e293b",
-                  borderRadius: 12,
-                  color: "#f8fafc",
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const point = payload[0]?.payload as {
+                    portfolioValue: number;
+                    benchmarkValue: number;
+                    buyMark: number | null;
+                    sellMark: number | null;
+                  };
+                  return (
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100">
+                      <p className="mb-1 font-medium text-slate-300">{String(label)}</p>
+                      <p>Portfolio {formatMoney(toNumber(point.portfolioValue))}</p>
+                      <p>Benchmark {formatMoney(toNumber(point.benchmarkValue))}</p>
+                      {point.buyMark != null ? <p className="text-emerald-400">Buy fill</p> : null}
+                      {point.sellMark != null ? <p className="text-rose-400">Sell fill</p> : null}
+                    </div>
+                  );
                 }}
-                formatter={(value, name) => [formatMoney(toNumber(value)), String(name)]}
               />
               <Line
+                yAxisId="value"
                 type="monotone"
                 dataKey="portfolioValue"
                 name="Portfolio"
@@ -136,6 +178,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 dot={false}
               />
               <Line
+                yAxisId="value"
                 type="monotone"
                 dataKey="benchmarkValue"
                 name="Benchmark"
@@ -144,7 +187,9 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 strokeDasharray="5 5"
                 dot={false}
               />
-            </LineChart>
+              <Scatter yAxisId="events" dataKey="buyMark" name="Buy" fill="#34d399" shape={<BuyMark />} />
+              <Scatter yAxisId="events" dataKey="sellMark" name="Sell" fill="#f43f5e" shape={<SellMark />} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
