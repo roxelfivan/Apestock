@@ -1,6 +1,6 @@
 # Apestock
 
-MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a Node.js backend; the React UI only configures the run and charts the result.
+Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; the React UI configures the run, inspects trades, and charts the result.
 
 ## Stack
 
@@ -9,15 +9,20 @@ MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a No
 
 ## Universe
 
-- US stocks: top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM (Yahoo symbols, e.g. `AAPL`, `BRK-B`, `SPY`)
-- Crypto: top 50 by market cap (Yahoo `-USD` pairs, e.g. `BTC-USD`)
+- US stocks: top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM
+- Crypto: top 50 by market cap (Yahoo `-USD` pairs)
+- Optional open Yahoo symbol (`allowAnySymbol`)
 
 ## Strategies
 
-- **MA_CROSSOVER** — buy when the short SMA crosses above the long SMA; sell on a cross below
-- **RSI** — buy when RSI crosses up through the oversold threshold; sell when it crosses down through overbought
+- **MA_CROSSOVER** / **EMA_CROSSOVER** — short MA crosses long MA
+- **RSI** — cross up through oversold; cross down through overbought
+- **MACD** — MACD line crosses the signal line
+- **BOLLINGER** — close reclaims the lower band; fades the upper band
+- **DONCHIAN** — close breaks the prior N-day high/low
+- **BUY_HOLD** — one full-capital buy on the first fill
 
-Signals are computed on day **T close**. Orders fill on day **T+1 open**. Sizing is long-only (no shorts): each BUY spends `tradePercent` of starting capital (default 20%); each SELL closes the oldest lot (FIFO). Extra signals still fill while cash or lots remain.
+Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.
 
 ## Run locally
 
@@ -41,6 +46,11 @@ npm run dev -w frontend
 
 Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
 
+```bash
+npm test
+npm run typecheck
+```
+
 ## Deploy on Vercel (one project, two services)
 
 [`vercel.json`](vercel.json) defines a **Vercel Services** project:
@@ -50,23 +60,7 @@ Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
 | `frontend` | `frontend/` | Vite | `/` (catch-all) |
 | `backend` | `backend/` | Express (`src/app.ts`) | `/api/*` |
 
-The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the Express service (the service still sees `/api/backtest`). There is **no service binding**: the UI is a static SPA, so it cannot use runtime-injected URLs. Bindings are only for server-to-server calls.
-
-### Steps
-
-1. Import [Apestock](https://github.com/roxelfivan/Apestock) in [Vercel](https://vercel.com).
-2. Branch: **`main`**. Root Directory: empty (repo root).
-3. Node.js **22.x**. No env vars.
-4. Do not set a custom Install Command.
-5. Deploy.
-
-Locally you can still run two terminals (`npm start -w apestock-backend` and `npm run dev -w frontend`), or run both services with:
-
-```bash
-npx vercel dev
-```
-
-After deploy: `https://<your-app>.vercel.app` and `https://<your-app>.vercel.app/api/health`.
+The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the Express service.
 
 ## API
 
@@ -80,10 +74,24 @@ After deploy: `https://<your-app>.vercel.app` and `https://<your-app>.vercel.app
   "params": { "shortPeriod": 50, "longPeriod": 200 },
   "startingCapital": 10000,
   "tradePercent": 20,
-  "timeframe": "3Y"
+  "timeframe": "3Y",
+  "sizingMode": "fixed_from_start",
+  "commissionBps": 0,
+  "commissionPerShare": 0,
+  "slippageBps": 0,
+  "allowAnySymbol": false
 }
 ```
 
-RSI example params: `{ "rsiPeriod": 14, "oversold": 30, "overbought": 70 }`. Timeframe is `1Y`, `3Y`, or `5Y`. `tradePercent` defaults to 20. The response includes `events` (`{ date, side: "BUY" | "SELL" }`) at fill dates for the equity chart.
+Timeframe is `1Y`, `3Y`, `5Y`, or `CUSTOM` (requires `startDate` and `endDate` as `YYYY-MM-DD`).
+
+The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, and risk metrics (`version: 2`).
+
+Also:
+
+- `GET /api/health`
+- `GET /api/universe?assetType=STOCK|CRYPTO`
+- `POST /api/backtest/sweep` — small parameter grid + overfitting warning
+- `POST /api/backtest/walk-forward` — expanding-window in-sample pick, out-of-sample test
 
 Missing tickers and data gaps return HTTP **400** with `{ "error": "..." }`.

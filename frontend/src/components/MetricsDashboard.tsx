@@ -8,27 +8,17 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { exportBacktestCsv } from "../lib/csv";
+import { formatMoney, formatNumber, formatPct, toneFor } from "../lib/format";
+import { STRATEGY_LABELS } from "../lib/defaults";
 import type { BacktestResult, TradeEvent } from "../types";
 
 const MIN_ZOOM_SPAN = 20;
-
-function formatPct(value: number): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
 
 function formatAxisPct(value: number): string {
   if (!Number.isFinite(value)) return "";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(0)}%`;
-}
-
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function toNumber(value: unknown): number {
@@ -123,9 +113,12 @@ function SellMark({ cx, cy }: { cx?: number; cy?: number }) {
 
 interface MetricsDashboardProps {
   result: BacktestResult | null;
+  compare: BacktestResult | null;
+  loading: boolean;
+  stale: boolean;
 }
 
-export default function MetricsDashboard({ result }: MetricsDashboardProps) {
+export default function MetricsDashboard({ result, compare, loading, stale }: MetricsDashboardProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const rangeRef = useRef({ start: 0, end: 0 });
   const pinchRef = useRef<{ distance: number; start: number; end: number } | null>(null);
@@ -137,25 +130,31 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
     const events = result.events ?? [];
     const basePortfolio = result.equityCurve[0]?.portfolioValue || 1;
     const baseBenchmark = result.equityCurve[0]?.benchmarkValue || 1;
+    const compareByDate = new Map(
+      (compare?.equityCurve ?? []).map((point) => [point.date, point.portfolioValue]),
+    );
+    const compareBase = compare?.equityCurve[0]?.portfolioValue || 1;
 
     return result.equityCurve.map((point) => {
       const dayEvents = eventsOnDate(events, point.date);
       const portfolioPct = ((point.portfolioValue / basePortfolio) - 1) * 100;
       const hasBuy = dayEvents.some((event) => event.side === "BUY");
       const hasSell = dayEvents.some((event) => event.side === "SELL");
+      const compareValue = compareByDate.get(point.date);
       return {
         date: point.date,
         portfolioValue: point.portfolioValue,
         benchmarkValue: point.benchmarkValue,
         portfolioPct,
         benchmarkPct: ((point.benchmarkValue / baseBenchmark) - 1) * 100,
+        comparePct: compareValue == null ? null : ((compareValue / compareBase) - 1) * 100,
         hasBuy,
         hasSell,
         buyMark: hasBuy ? portfolioPct : null,
         sellMark: hasSell ? portfolioPct : null,
       };
     });
-  }, [result]);
+  }, [compare, result]);
 
   useEffect(() => {
     const next = { start: 0, end: Math.max(0, chartData.length - 1) };
@@ -257,24 +256,53 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
     return (
       <section className="flex min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
         <div>
-          <p className="text-sm font-medium text-slate-300">No backtest yet</p>
+          <p className="text-sm font-medium text-slate-300">{loading ? "Running backtest…" : "No backtest yet"}</p>
           <p className="mt-1 text-sm text-slate-500">
-            Choose a top-50 S&P, Nasdaq, or US ETF name, or a crypto pair, then run a daily EOD simulation.
+            {loading
+              ? "Fetching Yahoo daily bars and simulating fills."
+              : "Choose a ticker, set a rule, then run a daily EOD simulation."}
           </p>
         </div>
       </section>
     );
   }
 
-  const { totalReturn, maxDrawdown, winRate, totalTrades } = result;
+  const { totalReturn, maxDrawdown, winRate, totalTrades, metrics } = result;
 
   return (
-    <section className="space-y-4">
+    <section className={`space-y-4 ${loading || stale ? "opacity-60" : ""}`}>
+      {stale || loading ? (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          {loading ? "Updating… previous result stays visible until the new run finishes." : "Inputs changed. This result is stale until you run again."}
+        </div>
+      ) : null}
+      {result.ticker ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Last run</p>
+            <p className="text-sm text-white">
+              {result.ticker} · {result.strategy ? STRATEGY_LABELS[result.strategy] : "strategy"} · {result.timeframe} ·{" "}
+              {result.testStartDate ?? result.startDate} → {result.endDate}
+            </p>
+            <p className="text-[11px] text-slate-500">{result.fillModel}</p>
+            {result.missingSessions ? (
+              <p className="text-[11px] text-amber-300">{result.missingSessions} missing sessions in the window</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => exportBacktestCsv(result)}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-200"
+          >
+            Export CSV
+          </button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
           label="Total return"
           value={formatPct(totalReturn)}
-          tone={totalReturn >= 0 ? "positive" : "negative"}
+          tone={toneFor(totalReturn)}
         />
         <MetricCard
           label="Max drawdown"
@@ -287,6 +315,22 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
           tone={winRate >= 50 ? "positive" : "negative"}
         />
         <MetricCard label="Total trades" value={String(totalTrades)} />
+        {metrics ? (
+          <>
+            <MetricCard label="CAGR" value={formatPct(metrics.cagr)} tone={toneFor(metrics.cagr)} />
+            <MetricCard label="Sharpe" value={formatNumber(metrics.sharpe, 2)} tone={toneFor(metrics.sharpe)} />
+            <MetricCard label="Sortino" value={formatNumber(metrics.sortino, 2)} tone={toneFor(metrics.sortino)} />
+            <MetricCard label="Calmar" value={formatNumber(metrics.calmar, 2)} tone={toneFor(metrics.calmar)} />
+            <MetricCard label="Excess vs B&H" value={formatPct(metrics.excessReturn)} tone={toneFor(metrics.excessReturn)} />
+            <MetricCard label="Alpha / beta" value={`${formatPct(metrics.alpha)} / ${formatNumber(metrics.beta, 2)}`} />
+            <MetricCard label="Profit factor" value={formatNumber(metrics.profitFactor, 2)} />
+            <MetricCard label="Time in market" value={formatPct(metrics.timeInMarket, 1)} />
+            <MetricCard label="Signal win rate" value={formatPct(metrics.winRateSignal)} />
+            <MetricCard label="Avg hold" value={`${formatNumber(metrics.avgHoldDays, 1)}d`} />
+            <MetricCard label="Vol" value={formatPct(metrics.volatility)} />
+            <MetricCard label="Max loss streak" value={String(metrics.maxConsecutiveLosses)} />
+          </>
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -302,6 +346,11 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
             <span className="flex items-center gap-1.5">
               <span className="h-px w-4 border-t border-dashed border-slate-400" /> Benchmark
             </span>
+            {compare ? (
+              <span className="flex items-center gap-1.5">
+                <span className="h-0.5 w-4 rounded bg-violet-400" /> Compare
+              </span>
+            ) : null}
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-0 border-x-[3.5px] border-x-transparent border-b-[6px] border-b-emerald-400" /> Buy
             </span>
@@ -379,6 +428,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                       <p>
                         Benchmark {formatPct(toNumber(point.benchmarkPct))} ({formatMoney(toNumber(point.benchmarkValue))})
                       </p>
+                      {point.comparePct != null ? <p>Compare {formatPct(toNumber(point.comparePct))}</p> : null}
                       {point.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
                       {point.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
                     </div>
@@ -408,6 +458,19 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 activeDot={false}
                 isAnimationActive={false}
               />
+              {compare ? (
+                <Line
+                  yAxisId="strategy"
+                  type="monotone"
+                  dataKey="comparePct"
+                  name="Compare"
+                  stroke="#a78bfa"
+                  strokeWidth={1.5}
+                  dot={false}
+                  activeDot={false}
+                  isAnimationActive={false}
+                />
+              ) : null}
               <Line
                 yAxisId="strategy"
                 dataKey="buyMark"

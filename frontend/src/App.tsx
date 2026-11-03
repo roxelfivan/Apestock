@@ -1,71 +1,157 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import AssetSelector from "./components/AssetSelector";
+import DrawdownChart from "./components/DrawdownChart";
 import MetricsDashboard from "./components/MetricsDashboard";
+import MonthlyGrid from "./components/MonthlyGrid";
+import PriceChart from "./components/PriceChart";
+import ResearchPanels from "./components/ResearchPanels";
+import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
+import TradeTable from "./components/TradeTable";
 import { isValidTicker, universeFor } from "./data/universes";
-import type { ApiError, AssetType, BacktestResult, StrategyName, StrategyParams, Timeframe } from "./types";
+import { runBacktest, runSweep, runWalkForward } from "./lib/api";
+import { DEFAULT_PARAMS } from "./lib/defaults";
+import { loadRuns, saveRun } from "./lib/history";
+import { configFromSearch, searchFromConfig } from "./lib/queryState";
+import { paramsError } from "./lib/validation";
+import type {
+  AssetType,
+  BacktestConfig,
+  BacktestResult,
+  SavedRun,
+  SizingMode,
+  StrategyName,
+  SweepResult,
+  Timeframe,
+  WalkForwardResult,
+} from "./types";
 
-const DEFAULT_PARAMS: Record<StrategyName, StrategyParams> = {
-  MA_CROSSOVER: { shortPeriod: 50, longPeriod: 200 },
-  RSI: { rsiPeriod: 14, oversold: 30, overbought: 70 },
-};
+function defaultCustomStart(): string {
+  const end = new Date();
+  const start = new Date(end);
+  start.setUTCFullYear(start.getUTCFullYear() - 3);
+  return start.toISOString().slice(0, 10);
+}
+
+function defaultCustomEnd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function App() {
-  const [assetType, setAssetType] = useState<AssetType>("STOCK");
-  const [ticker, setTicker] = useState("AAPL");
-  const [strategy, setStrategy] = useState<StrategyName>("MA_CROSSOVER");
-  const [params, setParams] = useState<StrategyParams>(DEFAULT_PARAMS.MA_CROSSOVER);
-  const [startingCapital, setStartingCapital] = useState(10000);
-  const [tradePercent, setTradePercent] = useState(20);
-  const [timeframe, setTimeframe] = useState<Timeframe>("3Y");
+  const initial = useMemo(() => configFromSearch(window.location.search), []);
+  const [assetType, setAssetType] = useState<AssetType>(initial.assetType ?? "STOCK");
+  const [ticker, setTicker] = useState(initial.ticker ?? "AAPL");
+  const [strategy, setStrategy] = useState<StrategyName>(initial.strategy ?? "MA_CROSSOVER");
+  const [params, setParams] = useState(initial.params ?? DEFAULT_PARAMS.MA_CROSSOVER);
+  const [startingCapital, setStartingCapital] = useState(initial.startingCapital ?? 10_000);
+  const [tradePercent, setTradePercent] = useState(initial.tradePercent ?? 20);
+  const [timeframe, setTimeframe] = useState<Timeframe>(initial.timeframe ?? "3Y");
+  const [startDate, setStartDate] = useState(initial.startDate ?? defaultCustomStart());
+  const [endDate, setEndDate] = useState(initial.endDate ?? defaultCustomEnd());
+  const [commissionBps, setCommissionBps] = useState(initial.commissionBps ?? 0);
+  const [commissionPerShare, setCommissionPerShare] = useState(initial.commissionPerShare ?? 0);
+  const [slippageBps, setSlippageBps] = useState(initial.slippageBps ?? 0);
+  const [sizingMode, setSizingMode] = useState<SizingMode>(initial.sizingMode ?? "fixed_from_start");
+  const [allowAnySymbol, setAllowAnySymbol] = useState(initial.allowAnySymbol ?? false);
   const [loading, setLoading] = useState(false);
+  const [researchBusy, setResearchBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<BacktestResult | null>(null);
+  const [stale, setStale] = useState(false);
+  const [runs, setRuns] = useState<SavedRun[]>(() => loadRuns());
+  const [compareId, setCompareId] = useState<string | null>(null);
+  const [sweep, setSweep] = useState<SweepResult | null>(null);
+  const [walkForward, setWalkForward] = useState<WalkForwardResult | null>(null);
 
-  const tickerValid = useMemo(() => isValidTicker(ticker, assetType), [ticker, assetType]);
+  const tickerValid = useMemo(
+    () => allowAnySymbol || isValidTicker(ticker, assetType),
+    [allowAnySymbol, ticker, assetType],
+  );
+  const formError = paramsError(strategy, params);
+  const config = useMemo<BacktestConfig>(
+    () => ({
+      ticker,
+      assetType,
+      strategy,
+      params,
+      startingCapital,
+      tradePercent,
+      timeframe,
+      startDate,
+      endDate,
+      commissionBps,
+      commissionPerShare,
+      slippageBps,
+      sizingMode,
+      allowAnySymbol,
+    }),
+    [
+      ticker,
+      assetType,
+      strategy,
+      params,
+      startingCapital,
+      tradePercent,
+      timeframe,
+      startDate,
+      endDate,
+      commissionBps,
+      commissionPerShare,
+      slippageBps,
+      sizingMode,
+      allowAnySymbol,
+    ],
+  );
+
+  useEffect(() => {
+    const next = searchFromConfig(config);
+    if (next !== window.location.search) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [config]);
+
+  function markStale() {
+    if (result) setStale(true);
+  }
 
   function handleAssetTypeChange(nextType: AssetType) {
     setAssetType(nextType);
     const nextUniverse = universeFor(nextType);
-    setTicker(nextUniverse[0]);
+    if (!allowAnySymbol) setTicker(nextUniverse[0]);
     setResult(null);
     setError("");
+    setStale(false);
+  }
+
+  function handleTickerChange(next: string) {
+    setTicker(next);
+    markStale();
   }
 
   function handleStrategyChange(nextStrategy: StrategyName) {
     setStrategy(nextStrategy);
     setParams(DEFAULT_PARAMS[nextStrategy]);
+    markStale();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tickerValid) {
-      setError("Enter a ticker from the selected universe.");
+      setError("Enter a ticker from the selected universe, or enable any-symbol search.");
+      return;
+    }
+    if (formError) {
+      setError(formError);
       return;
     }
 
     setLoading(true);
     setError("");
-
     try {
-      const response = await fetch("/api/backtest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticker: ticker.trim().toUpperCase(),
-          assetType,
-          strategy,
-          params,
-          startingCapital,
-          tradePercent,
-          timeframe,
-        }),
-      });
-      const payload = (await response.json()) as BacktestResult & ApiError;
-      if (!response.ok) {
-        throw new Error(payload.error || "Backtest failed.");
-      }
+      const payload = await runBacktest(config);
       setResult(payload);
+      setStale(false);
+      setRuns(saveRun(config, payload));
     } catch (err) {
       setResult(null);
       setError(err instanceof Error ? err.message : "Unable to run backtest.");
@@ -73,6 +159,53 @@ export default function App() {
       setLoading(false);
     }
   }
+
+  async function handleSweep() {
+    setResearchBusy(true);
+    setError("");
+    try {
+      setSweep(await runSweep(config));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sweep failed.");
+    } finally {
+      setResearchBusy(false);
+    }
+  }
+
+  async function handleWalkForward() {
+    setResearchBusy(true);
+    setError("");
+    try {
+      setWalkForward(await runWalkForward(config));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Walk-forward failed.");
+    } finally {
+      setResearchBusy(false);
+    }
+  }
+
+  function restoreRun(run: SavedRun) {
+    const next = run.config;
+    setAssetType(next.assetType);
+    setTicker(next.ticker);
+    setStrategy(next.strategy);
+    setParams(next.params);
+    setStartingCapital(next.startingCapital);
+    setTradePercent(next.tradePercent);
+    setTimeframe(next.timeframe);
+    setStartDate(next.startDate);
+    setEndDate(next.endDate);
+    setCommissionBps(next.commissionBps);
+    setCommissionPerShare(next.commissionPerShare);
+    setSlippageBps(next.slippageBps);
+    setSizingMode(next.sizingMode);
+    setAllowAnySymbol(next.allowAnySymbol);
+    setResult(run.result);
+    setStale(false);
+    setError("");
+  }
+
+  const compare = runs.find((run) => run.id === compareId)?.result ?? null;
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -82,13 +215,12 @@ export default function App() {
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              Top 50 S&P, Nasdaq, and US ETFs plus top-50 crypto. EOD Yahoo data, MA crossover or RSI.
-              Signals fire on the close;
-              fills happen at the next open.
+              Curated large-cap, ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
+              strategies, optional costs, and inspectable trades. Signals on the close; fills at the next open.
             </p>
           </div>
           <div className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400">
-            long only · slice per signal · T+1 open
+            long only · T+1 open · warmup before the test window
           </div>
         </header>
 
@@ -97,8 +229,13 @@ export default function App() {
             <AssetSelector
               assetType={assetType}
               ticker={ticker}
+              allowAnySymbol={allowAnySymbol}
               onAssetTypeChange={handleAssetTypeChange}
-              onTickerChange={setTicker}
+              onTickerChange={handleTickerChange}
+              onAllowAnySymbolChange={(value) => {
+                setAllowAnySymbol(value);
+                markStale();
+              }}
             />
             <StrategyForm
               strategy={strategy}
@@ -106,14 +243,65 @@ export default function App() {
               startingCapital={startingCapital}
               tradePercent={tradePercent}
               timeframe={timeframe}
+              startDate={startDate}
+              endDate={endDate}
+              commissionBps={commissionBps}
+              commissionPerShare={commissionPerShare}
+              slippageBps={slippageBps}
+              sizingMode={sizingMode}
               loading={loading}
               tickerValid={tickerValid}
+              paramsValid={!formError}
+              paramsError={formError}
               onStrategyChange={handleStrategyChange}
-              onParamsChange={(patch) => setParams((current) => ({ ...current, ...patch }))}
-              onStartingCapitalChange={setStartingCapital}
-              onTradePercentChange={setTradePercent}
-              onTimeframeChange={setTimeframe}
+              onParamsChange={(patch) => {
+                setParams((current) => ({ ...current, ...patch }));
+                markStale();
+              }}
+              onStartingCapitalChange={(value) => {
+                setStartingCapital(value);
+                markStale();
+              }}
+              onTradePercentChange={(value) => {
+                setTradePercent(value);
+                markStale();
+              }}
+              onTimeframeChange={(value) => {
+                setTimeframe(value);
+                markStale();
+              }}
+              onStartDateChange={(value) => {
+                setStartDate(value);
+                markStale();
+              }}
+              onEndDateChange={(value) => {
+                setEndDate(value);
+                markStale();
+              }}
+              onCommissionBpsChange={(value) => {
+                setCommissionBps(value);
+                markStale();
+              }}
+              onCommissionPerShareChange={(value) => {
+                setCommissionPerShare(value);
+                markStale();
+              }}
+              onSlippageBpsChange={(value) => {
+                setSlippageBps(value);
+                markStale();
+              }}
+              onSizingModeChange={(value) => {
+                setSizingMode(value);
+                markStale();
+              }}
               onSubmit={handleSubmit}
+            />
+            <ResearchPanels
+              sweep={sweep}
+              walkForward={walkForward}
+              busy={researchBusy}
+              onSweep={handleSweep}
+              onWalkForward={handleWalkForward}
             />
             {error ? (
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
@@ -121,7 +309,14 @@ export default function App() {
               </div>
             ) : null}
           </div>
-          <MetricsDashboard result={result} />
+          <div className="space-y-4">
+            <MetricsDashboard result={result} compare={compare} loading={loading} stale={stale} />
+            {result ? <PriceChart result={result} /> : null}
+            {result ? <DrawdownChart result={result} /> : null}
+            {result ? <MonthlyGrid result={result} /> : null}
+            {result ? <TradeTable result={result} /> : null}
+            <RunHistory runs={runs} compareId={compareId} onCompare={setCompareId} onRestore={restoreRun} />
+          </div>
         </div>
       </div>
     </div>
