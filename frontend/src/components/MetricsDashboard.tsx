@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -47,13 +47,6 @@ function eventsOnDate(events: TradeEvent[], date: string): TradeEvent[] {
   return events.filter((event) => event.date === date);
 }
 
-function syncFocusDate(state: unknown, setDate: (date: string) => void) {
-  if (!state || typeof state !== "object") return;
-  const label = (state as { activeLabel?: unknown }).activeLabel;
-  if (label == null || label === "") return;
-  setDate(String(label));
-}
-
 interface MetricCardProps {
   label: string;
   value: string;
@@ -64,9 +57,9 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
   const toneClass =
     tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className={`mt-1.5 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -86,12 +79,6 @@ interface MetricsDashboardProps {
 }
 
 export default function MetricsDashboard({ result }: MetricsDashboardProps) {
-  const [focusDate, setFocusDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    setFocusDate(null);
-  }, [result]);
-
   const view = useMemo(() => {
     if (!result) return null;
     const events = result.events ?? [];
@@ -141,7 +128,6 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
   }
 
   const { totalReturn, maxDrawdown, winRate, totalTrades, chartData, strategyDomain, benchmarkDomain } = view;
-  const focused = chartData.find((point) => point.date === focusDate) ?? null;
 
   return (
     <section className="space-y-4">
@@ -167,10 +153,10 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Equity</p>
-            <h3 className="text-base font-semibold text-white">Strategy vs buy & hold</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Equity</p>
+            <h3 className="text-sm font-semibold text-white">Strategy vs buy & hold</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-4 rounded bg-blue-500" /> Portfolio
             </span>
@@ -187,16 +173,11 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
         </div>
         <div className="h-[360px] w-full touch-manipulation">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={chartData}
-              margin={{ top: 12, right: 12, left: 4, bottom: 8 }}
-              onMouseMove={(state) => syncFocusDate(state, setFocusDate)}
-              onClick={(state) => syncFocusDate(state, setFocusDate)}
-            >
+            <ComposedChart data={chartData} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: "#94a3b8", fontSize: 11 }}
+                tick={{ fill: "#94a3b8", fontSize: 9 }}
                 minTickGap={40}
                 axisLine={{ stroke: "#334155" }}
                 tickLine={false}
@@ -204,41 +185,45 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
               <YAxis
                 yAxisId="strategy"
                 orientation="left"
-                tick={{ fill: "#93c5fd", fontSize: 11 }}
+                tick={{ fill: "#93c5fd", fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatAxisPct}
-                width={48}
+                width={40}
                 domain={strategyDomain}
                 allowDataOverflow
               />
               <YAxis
                 yAxisId="benchmark"
                 orientation="right"
-                tick={{ fill: "#94a3b8", fontSize: 11 }}
+                tick={{ fill: "#94a3b8", fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatAxisPct}
-                width={48}
+                width={40}
                 domain={benchmarkDomain}
                 allowDataOverflow
               />
               <Tooltip
-                active={focused != null}
+                trigger="hover"
+                shared
+                isAnimationActive={false}
                 cursor={{ stroke: "#64748b", strokeWidth: 1 }}
-                content={() => {
-                  if (!focused) return null;
+                content={({ active, label }) => {
+                  if (!active || label == null) return null;
+                  const point = chartData.find((row) => row.date === String(label));
+                  if (!point) return null;
                   return (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100">
-                      <p className="mb-1 font-medium text-slate-300">{focused.date}</p>
+                    <div className="rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-[10px] leading-4 text-slate-100 shadow-lg">
+                      <p className="mb-0.5 font-medium text-slate-300">{point.date}</p>
                       <p>
-                        Portfolio {formatPct(toNumber(focused.portfolioPct))} ({formatMoney(toNumber(focused.portfolioValue))})
+                        Portfolio {formatPct(toNumber(point.portfolioPct))} ({formatMoney(toNumber(point.portfolioValue))})
                       </p>
                       <p>
-                        Benchmark {formatPct(toNumber(focused.benchmarkPct))} ({formatMoney(toNumber(focused.benchmarkValue))})
+                        Benchmark {formatPct(toNumber(point.benchmarkPct))} ({formatMoney(toNumber(point.benchmarkValue))})
                       </p>
-                      {focused.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
-                      {focused.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
+                      {point.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
+                      {point.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
                     </div>
                   );
                 }}
@@ -272,6 +257,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 name="Buy"
                 stroke="none"
                 legendType="none"
+                tooltipType="none"
                 dot={(props) =>
                   props.value == null ? <g /> : <BuyMark cx={props.cx} cy={props.cy} />
                 }
@@ -284,6 +270,7 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 name="Sell"
                 stroke="none"
                 legendType="none"
+                tooltipType="none"
                 dot={(props) =>
                   props.value == null ? <g /> : <SellMark cx={props.cx} cy={props.cy} />
                 }
