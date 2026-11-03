@@ -1,9 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
   Line,
   ResponsiveContainer,
-  Scatter,
   Tooltip,
   XAxis,
   YAxis,
@@ -34,6 +34,26 @@ function toNumber(value: unknown): number {
   return Number(value);
 }
 
+function paddedDomain(values: number[]): [number, number] {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = Math.max((max - min) * 0.15, 2);
+  const lo = Math.floor(min - pad);
+  const hi = Math.ceil(max + pad);
+  return lo === hi ? [lo - 2, hi + 2] : [lo, hi];
+}
+
+function eventsOnDate(events: TradeEvent[], date: string): TradeEvent[] {
+  return events.filter((event) => event.date === date);
+}
+
+function syncFocusDate(state: unknown, setDate: (date: string) => void) {
+  if (!state || typeof state !== "object") return;
+  const label = (state as { activeLabel?: unknown }).activeLabel;
+  if (label == null || label === "") return;
+  setDate(String(label));
+}
+
 interface MetricCardProps {
   label: string;
   value: string;
@@ -61,16 +81,53 @@ function SellMark({ cx, cy }: { cx?: number; cy?: number }) {
   return <polygon points={`${cx},${cy + 5} ${cx - 3.5},${cy - 1} ${cx + 3.5},${cy - 1}`} fill="#f43f5e" />;
 }
 
-function eventsOnDate(events: TradeEvent[], date: string): TradeEvent[] {
-  return events.filter((event) => event.date === date);
-}
-
 interface MetricsDashboardProps {
   result: BacktestResult | null;
 }
 
 export default function MetricsDashboard({ result }: MetricsDashboardProps) {
-  if (!result) {
+  const [focusDate, setFocusDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFocusDate(null);
+  }, [result]);
+
+  const view = useMemo(() => {
+    if (!result) return null;
+    const events = result.events ?? [];
+    const basePortfolio = result.equityCurve[0]?.portfolioValue || 1;
+    const baseBenchmark = result.equityCurve[0]?.benchmarkValue || 1;
+
+    const points = result.equityCurve.map((point) => {
+      const dayEvents = eventsOnDate(events, point.date);
+      return {
+        date: point.date,
+        portfolioValue: point.portfolioValue,
+        benchmarkValue: point.benchmarkValue,
+        portfolioPct: ((point.portfolioValue / basePortfolio) - 1) * 100,
+        benchmarkPct: ((point.benchmarkValue / baseBenchmark) - 1) * 100,
+        hasBuy: dayEvents.some((event) => event.side === "BUY"),
+        hasSell: dayEvents.some((event) => event.side === "SELL"),
+      };
+    });
+
+    const strategyDomain = paddedDomain(points.map((point) => point.portfolioPct));
+    const benchmarkDomain = paddedDomain(points.map((point) => point.benchmarkPct));
+    const markY = strategyDomain[0];
+
+    return {
+      ...result,
+      strategyDomain,
+      benchmarkDomain,
+      chartData: points.map((point) => ({
+        ...point,
+        buyMark: point.hasBuy ? markY : null,
+        sellMark: point.hasSell ? markY : null,
+      })),
+    };
+  }, [result]);
+
+  if (!result || !view) {
     return (
       <section className="flex min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
         <div>
@@ -83,29 +140,8 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
     );
   }
 
-  const { totalReturn, maxDrawdown, winRate, totalTrades, equityCurve } = result;
-  const events = result.events ?? [];
-  const basePortfolio = equityCurve[0]?.portfolioValue || 1;
-  const baseBenchmark = equityCurve[0]?.benchmarkValue || 1;
-
-  const chartData = equityCurve.map((point) => {
-    const dayEvents = eventsOnDate(events, point.date);
-    const portfolioPct = ((point.portfolioValue / basePortfolio) - 1) * 100;
-    const benchmarkPct = ((point.benchmarkValue / baseBenchmark) - 1) * 100;
-    return {
-      date: point.date,
-      portfolioValue: point.portfolioValue,
-      benchmarkValue: point.benchmarkValue,
-      portfolioPct,
-      benchmarkPct,
-      hasBuy: dayEvents.some((event) => event.side === "BUY"),
-      hasSell: dayEvents.some((event) => event.side === "SELL"),
-    };
-  });
-
-  const markY = Math.min(...chartData.flatMap((point) => [point.portfolioPct, point.benchmarkPct]));
-  const buyDots = chartData.filter((point) => point.hasBuy).map((point) => ({ date: point.date, mark: markY }));
-  const sellDots = chartData.filter((point) => point.hasSell).map((point) => ({ date: point.date, mark: markY }));
+  const { totalReturn, maxDrawdown, winRate, totalTrades, chartData, strategyDomain, benchmarkDomain } = view;
+  const focused = chartData.find((point) => point.date === focusDate) ?? null;
 
   return (
     <section className="space-y-4">
@@ -149,9 +185,14 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
             </span>
           </div>
         </div>
-        <div className="h-[360px] w-full">
+        <div className="h-[360px] w-full touch-manipulation">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 12, right: 8, left: 4, bottom: 8 }}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 12, right: 12, left: 4, bottom: 8 }}
+              onMouseMove={(state) => syncFocusDate(state, setFocusDate)}
+              onClick={(state) => syncFocusDate(state, setFocusDate)}
+            >
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -161,42 +202,60 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 tickLine={false}
               />
               <YAxis
+                yAxisId="strategy"
+                orientation="left"
+                tick={{ fill: "#93c5fd", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={formatAxisPct}
+                width={48}
+                domain={strategyDomain}
+                allowDataOverflow
+              />
+              <YAxis
+                yAxisId="benchmark"
+                orientation="right"
                 tick={{ fill: "#94a3b8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatAxisPct}
                 width={48}
-                domain={["auto", "auto"]}
+                domain={benchmarkDomain}
+                allowDataOverflow
               />
               <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null;
-                  const point = payload[0]?.payload as (typeof chartData)[number];
+                active={focused != null}
+                cursor={{ stroke: "#64748b", strokeWidth: 1 }}
+                content={() => {
+                  if (!focused) return null;
                   return (
                     <div className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100">
-                      <p className="mb-1 font-medium text-slate-300">{String(label)}</p>
+                      <p className="mb-1 font-medium text-slate-300">{focused.date}</p>
                       <p>
-                        Portfolio {formatPct(toNumber(point.portfolioPct))} ({formatMoney(toNumber(point.portfolioValue))})
+                        Portfolio {formatPct(toNumber(focused.portfolioPct))} ({formatMoney(toNumber(focused.portfolioValue))})
                       </p>
                       <p>
-                        Benchmark {formatPct(toNumber(point.benchmarkPct))} ({formatMoney(toNumber(point.benchmarkValue))})
+                        Benchmark {formatPct(toNumber(focused.benchmarkPct))} ({formatMoney(toNumber(focused.benchmarkValue))})
                       </p>
-                      {point.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
-                      {point.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
+                      {focused.hasBuy ? <p className="text-emerald-400">Buy fill</p> : null}
+                      {focused.hasSell ? <p className="text-rose-400">Sell fill</p> : null}
                     </div>
                   );
                 }}
               />
               <Line
+                yAxisId="strategy"
                 type="monotone"
                 dataKey="portfolioPct"
                 name="Portfolio"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 dot={false}
+                activeDot={{ r: 4, fill: "#3b82f6", stroke: "#0f172a", strokeWidth: 2 }}
                 isAnimationActive={false}
               />
               <Line
+                yAxisId="benchmark"
                 type="monotone"
                 dataKey="benchmarkPct"
                 name="Benchmark"
@@ -204,25 +263,32 @@ export default function MetricsDashboard({ result }: MetricsDashboardProps) {
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
+                activeDot={false}
                 isAnimationActive={false}
               />
-              <Scatter
-                data={buyDots}
-                dataKey="mark"
+              <Line
+                yAxisId="strategy"
+                dataKey="buyMark"
                 name="Buy"
-                fill="#34d399"
-                shape={<BuyMark />}
-                isAnimationActive={false}
+                stroke="none"
                 legendType="none"
+                dot={(props) =>
+                  props.value == null ? <g /> : <BuyMark cx={props.cx} cy={props.cy} />
+                }
+                activeDot={false}
+                isAnimationActive={false}
               />
-              <Scatter
-                data={sellDots}
-                dataKey="mark"
+              <Line
+                yAxisId="strategy"
+                dataKey="sellMark"
                 name="Sell"
-                fill="#f43f5e"
-                shape={<SellMark />}
-                isAnimationActive={false}
+                stroke="none"
                 legendType="none"
+                dot={(props) =>
+                  props.value == null ? <g /> : <SellMark cx={props.cx} cy={props.cy} />
+                }
+                activeDot={false}
+                isAnimationActive={false}
               />
             </ComposedChart>
           </ResponsiveContainer>
