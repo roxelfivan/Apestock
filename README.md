@@ -9,7 +9,7 @@ MVP web app for daily (EOD) stock and crypto backtesting. Strategies run on a No
 
 ## Universe
 
-- US stocks: S&P 100 (Yahoo symbols, e.g. `AAPL`, `BRK-B`)
+- US stocks: top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM (Yahoo symbols, e.g. `AAPL`, `BRK-B`, `SPY`)
 - Crypto: top 50 by market cap (Yahoo `-USD` pairs, e.g. `BTC-USD`)
 
 ## Strategies
