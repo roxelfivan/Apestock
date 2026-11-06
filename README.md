@@ -16,6 +16,10 @@ Current version: **0.0.1**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 - Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours
 - Optional open Yahoo symbol (`allowAnySymbol`)
 
+## Price cache
+
+Daily OHLC is saved on the backend under `data/prices/{SYMBOL}.json`. Repeat runs reuse that file. Yahoo is called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`) so the store is current without downloading the whole universe.
+
 ## Strategies
 
 - **MA_CROSSOVER** / **EMA_CROSSOVER** — short MA crosses long MA
@@ -97,6 +101,7 @@ Also:
 
 - `GET /api/health`
 - `GET /api/universe?assetType=STOCK|CRYPTO`
+- `POST /api/prices/sync` — `{ "ticker": "AAPL", "assetType": "STOCK" }` incremental EOD refresh
 - `POST /api/backtest/sweep` — small parameter grid + overfitting warning
 - `POST /api/backtest/walk-forward` — expanding-window in-sample pick, out-of-sample test
 

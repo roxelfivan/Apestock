@@ -200,3 +200,12 @@ export interface UniverseSnapshot {
   stock: UniverseSlice;
   crypto: UniverseSlice;
 }
+
+export interface PriceSyncResult {
+  ticker: string;
+  assetType: AssetType;
+  lastBar: string | null;
+  completeThrough: string;
+  downloaded: boolean;
+  barCount: number;
+}
