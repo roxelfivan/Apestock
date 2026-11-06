@@ -44,5 +44,30 @@ export function paramsError(strategy: StrategyName, params: StrategyParams): str
     if (!Number.isInteger(period) || period < 2) return "Donchian period must be an integer of at least 2.";
     return null;
   }
+  if (strategy === "STOCHASTIC") {
+    const period = Number(params.kPeriod);
+    const oversold = Number(params.oversold);
+    const overbought = Number(params.overbought);
+    if (!Number.isInteger(period) || period < 2) return "Stochastic %K period must be an integer of at least 2.";
+    if (!(oversold > 0 && overbought < 100 && oversold < overbought)) {
+      return "Oversold must be below overbought, inside 0–100.";
+    }
+    return null;
+  }
+  if (strategy === "MOMENTUM") {
+    const lookback = Number(params.lookback);
+    if (!Number.isInteger(lookback) || lookback < 2) return "Lookback must be an integer of at least 2.";
+    return null;
+  }
+  if (strategy === "WILLIAMS_R") {
+    const period = Number(params.wrPeriod);
+    const oversold = Number(params.oversold);
+    const overbought = Number(params.overbought);
+    if (!Number.isInteger(period) || period < 2) return "Williams %R period must be an integer of at least 2.";
+    if (!(oversold > -100 && overbought < 0 && oversold < overbought)) {
+      return "Oversold must be below overbought, inside -100–0.";
+    }
+    return null;
+  }
   return null;
 }

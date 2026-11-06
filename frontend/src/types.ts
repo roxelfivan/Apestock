@@ -6,6 +6,9 @@ export type StrategyName =
   | "MACD"
   | "BOLLINGER"
   | "DONCHIAN"
+  | "STOCHASTIC"
+  | "MOMENTUM"
+  | "WILLIAMS_R"
   | "BUY_HOLD";
 export type Timeframe = "1Y" | "3Y" | "5Y" | "CUSTOM";
 export type SizingMode = "fixed_from_start" | "percent_of_equity";
@@ -23,6 +26,9 @@ export interface StrategyParams {
   bbPeriod?: number;
   bbStdDev?: number;
   donchianPeriod?: number;
+  kPeriod?: number;
+  lookback?: number;
+  wrPeriod?: number;
 }
 
 export interface EquityPoint {

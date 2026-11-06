@@ -67,6 +67,23 @@ export function defaultGrid(strategy: StrategyName): StrategyParams[] {
   if (strategy === "DONCHIAN") {
     return [{ donchianPeriod: 20 }, { donchianPeriod: 55 }, { donchianPeriod: 100 }];
   }
+  if (strategy === "STOCHASTIC") {
+    return [
+      { kPeriod: 14, oversold: 20, overbought: 80 },
+      { kPeriod: 14, oversold: 25, overbought: 75 },
+      { kPeriod: 21, oversold: 20, overbought: 80 },
+    ];
+  }
+  if (strategy === "MOMENTUM") {
+    return [{ lookback: 10 }, { lookback: 20 }, { lookback: 60 }];
+  }
+  if (strategy === "WILLIAMS_R") {
+    return [
+      { wrPeriod: 14, oversold: -80, overbought: -20 },
+      { wrPeriod: 14, oversold: -85, overbought: -15 },
+      { wrPeriod: 21, oversold: -80, overbought: -20 },
+    ];
+  }
   return [{}];
 }
 

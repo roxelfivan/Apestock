@@ -87,3 +87,15 @@ test("BUY_HOLD emits a single opening buy", () => {
   assert.equal(signals[0], "BUY");
   assert.ok(signals.slice(1).every((signal) => signal === "HOLD"));
 });
+
+test("momentum buys after N-day return turns positive", () => {
+  const ohlc = barsFromCloses([10, 10, 10, 9, 8, 7, 8, 9, 11, 12]);
+  const { signals } = computeSignals(ohlc, "MOMENTUM", { lookback: 3 });
+  assert.ok(signals.includes("BUY"));
+});
+
+test("stochastic emits a buy after leaving oversold", () => {
+  const ohlc = barsFromCloses([20, 19, 18, 17, 16, 15, 14, 13, 12, 18, 20]);
+  const { signals } = computeSignals(ohlc, "STOCHASTIC", { kPeriod: 5, oversold: 20, overbought: 80 });
+  assert.ok(signals.includes("BUY"));
+});
