@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { sliceFor } from "../data/universe.js";
-import { httpStatus } from "../errors.js";
+import { httpStatus, sanitizeUserError } from "../errors.js";
 import { executeBacktest } from "../engine/execute.js";
 import { executeSweep, executeWalkForward } from "../engine/research.js";
 import { getUniverseSnapshot } from "../services/universeService.js";
@@ -8,7 +8,7 @@ import type { AssetType, BacktestRequest } from "../types.js";
 
 function handleError(res: Response, error: unknown): Response {
   const status = httpStatus(error);
-  const message = error instanceof Error ? error.message : "Backtest failed.";
+  const message = sanitizeUserError(error, "Backtest failed.");
   if (status >= 500) console.error(error);
   return res.status(status).json({ error: message });
 }

@@ -6,6 +6,7 @@ import type {
   UniverseSnapshot,
   WalkForwardResult,
 } from "../types";
+import { sanitizeUserError } from "./errors";
 
 export function requestBody(config: BacktestConfig) {
   return {
@@ -32,10 +33,17 @@ async function postJson<T>(url: string, config: BacktestConfig): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(requestBody(config)),
   });
-  const payload = (await response.json()) as T & ApiError;
-  if (!response.ok) {
-    throw new Error(payload.error || "Request failed.");
+  const raw = await response.text();
+  let payload: (T & ApiError) | null = null;
+  try {
+    payload = raw ? (JSON.parse(raw) as T & ApiError) : null;
+  } catch {
+    throw new Error(sanitizeUserError(raw, "Request failed."));
   }
+  if (!response.ok) {
+    throw new Error(sanitizeUserError(payload?.error, "Request failed."));
+  }
+  if (!payload) throw new Error("Empty response.");
   return payload;
 }
 
@@ -53,9 +61,15 @@ export function runWalkForward(config: BacktestConfig): Promise<WalkForwardResul
 
 export async function fetchUniverse(): Promise<UniverseSnapshot> {
   const response = await fetch("/api/universe");
-  const payload = (await response.json()) as UniverseSnapshot & ApiError;
-  if (!response.ok) {
-    throw new Error(payload.error || "Unable to load universe.");
+  const raw = await response.text();
+  let payload: (UniverseSnapshot & ApiError) | null = null;
+  try {
+    payload = raw ? (JSON.parse(raw) as UniverseSnapshot & ApiError) : null;
+  } catch {
+    throw new Error(sanitizeUserError(raw, "Unable to load universe."));
+  }
+  if (!response.ok || !payload) {
+    throw new Error(sanitizeUserError(payload?.error, "Unable to load universe."));
   }
   if (!payload.stock?.groups || !payload.crypto?.groups) {
     throw new Error("Universe response was missing ranked groups.");

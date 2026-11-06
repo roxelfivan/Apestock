@@ -4,6 +4,7 @@ import {
   unique,
   yahooSymbol,
 } from "../data/universe.js";
+import { DataError, sanitizeUserError } from "../errors.js";
 import { predefinedScreener, screenQuotes, type ScreenerQuote } from "./yahooClient.js";
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -194,10 +195,17 @@ export async function getUniverseSnapshot(): Promise<UniverseSnapshot> {
   if (cache && Date.now() < cache.expiresAt) return cache.snapshot;
   if (inflight) return inflight;
 
+  const stale = cache?.snapshot ?? null;
   inflight = downloadSnapshot()
     .then((snapshot) => {
       cache = { snapshot, expiresAt: Date.now() + CACHE_TTL_MS };
       return snapshot;
+    })
+    .catch((error: unknown) => {
+      if (stale) return stale;
+      throw new DataError(
+        `Unable to load the live ticker universe: ${sanitizeUserError(error, "Yahoo Finance is temporarily unavailable.")}`,
+      );
     })
     .finally(() => {
       inflight = null;

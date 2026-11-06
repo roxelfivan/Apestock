@@ -12,6 +12,10 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Fixed
+
+- Sweep and walk-forward errors no longer dump Yahoo HTML timeout pages into the UI
+
 ### Added
 
 - Stochastic, time-series momentum, and Williams %R strategies
