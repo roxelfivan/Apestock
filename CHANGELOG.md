@@ -12,17 +12,12 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
-### Added
-
-- Gorilla app icon (favicon, Apple touch icon, PWA icons) and header brand mark
-- Header badge showing the frontend package version
-- Live top-50 S&P, Nasdaq, US ETF, and crypto lists for the asset selector
-  (6-hour server cache, last-good snapshot in `localStorage`)
-
 ## [0.0.1] - 2026-11-06
 
 First numbered release of Apestock: a daily (EOD) stock and crypto backtester
 with a Node.js engine and a React UI.
+
+GitHub release: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.1
 
 ### Added
 
@@ -45,6 +40,10 @@ with a Node.js engine and a React UI.
 - In-memory Yahoo daily-bar cache (6 hours) with request coalescing
 - npm workspaces, TypeScript throughout, and Vercel Services deploy
   (Vite frontend at `/`, Express backend at `/api/*`)
+- Gorilla app icon (favicon, Apple touch icon, PWA icons) and header brand mark
+- Header badge showing the frontend package version
+- Live top-50 S&P, Nasdaq, US ETF, and crypto lists for the asset selector
+  (6-hour server cache, last-good snapshot in `localStorage`)
 
 ### Fixed
 
