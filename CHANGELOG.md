@@ -12,6 +12,13 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Added
+
+- Gorilla app icon (favicon, Apple touch icon, PWA icons) and header brand mark
+- Header badge showing the frontend package version
+- Live top-50 S&P, Nasdaq, US ETF, and crypto lists for the asset selector
+  (6-hour server cache, last-good snapshot in `localStorage`)
+
 ## [0.0.1] - 2026-11-06
 
 First numbered release of Apestock: a daily (EOD) stock and crypto backtester
