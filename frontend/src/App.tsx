@@ -11,6 +11,7 @@ import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
 import { isValidTicker, readStoredUniverse, storeUniverse, universeFor } from "./data/universes";
 import { fetchUniverse, runBacktest, runSweep, runWalkForward } from "./lib/api";
+import { sanitizeUserError } from "./lib/errors";
 import { DEFAULT_PARAMS } from "./lib/defaults";
 import { loadRuns, saveRun } from "./lib/history";
 import { configFromSearch, searchFromConfig } from "./lib/queryState";
@@ -182,7 +183,7 @@ export default function App() {
       setRuns(saveRun(config, payload));
     } catch (err) {
       setResult(null);
-      setError(err instanceof Error ? err.message : "Unable to run backtest.");
+      setError(sanitizeUserError(err, "Unable to run backtest."));
     } finally {
       setLoading(false);
     }
@@ -194,7 +195,7 @@ export default function App() {
     try {
       setSweep(await runSweep(config));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sweep failed.");
+      setError(sanitizeUserError(err, "Sweep failed."));
     } finally {
       setResearchBusy(false);
     }
@@ -206,7 +207,7 @@ export default function App() {
     try {
       setWalkForward(await runWalkForward(config));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Walk-forward failed.");
+      setError(sanitizeUserError(err, "Walk-forward failed."));
     } finally {
       setResearchBusy(false);
     }
@@ -349,7 +350,7 @@ export default function App() {
               onWalkForward={handleWalkForward}
             />
             {error ? (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 break-words">
                 {error}
               </div>
             ) : null}

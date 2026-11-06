@@ -1,3 +1,4 @@
+import { DataError, sanitizeUserError } from "../errors.js";
 import type { AssetType, OhlcBar } from "../types.js";
 import { yahooFinance } from "./yahooClient.js";
 
@@ -56,14 +57,7 @@ function writeCache(key: string, bars: OhlcBar[]): void {
   priceCache.set(key, { bars: cloneBars(bars), expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-export class DataError extends Error {
-  status = 400;
-
-  constructor(message: string) {
-    super(message);
-    this.name = "DataError";
-  }
-}
+export { DataError };
 
 function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }): OhlcBar | null {
   const date = toDateString(row.date);
@@ -94,7 +88,7 @@ async function downloadHistoricalData(symbol: string, startDate: string, endDate
     });
     quotes = result.quotes ?? [];
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "Unknown Yahoo Finance error";
+    const reason = sanitizeUserError(error, "Unknown Yahoo Finance error");
     throw new DataError(`Unable to fetch historical data for ${symbol}: ${reason}`);
   }
 
