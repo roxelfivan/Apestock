@@ -23,6 +23,9 @@ Current version: **0.0.1**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 - **MACD** — MACD line crosses the signal line
 - **BOLLINGER** — close reclaims the lower band; fades the upper band
 - **DONCHIAN** — close breaks the prior N-day high/low
+- **STOCHASTIC** — %K crosses up through oversold; down through overbought
+- **MOMENTUM** — N-day return flips from negative to positive (buy) or the reverse (sell)
+- **WILLIAMS_R** — %R crosses up through oversold (e.g. -80); down through overbought (e.g. -20)
 - **BUY_HOLD** — one full-capital buy on the first fill
 
 Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.

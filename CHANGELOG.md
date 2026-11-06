@@ -14,6 +14,7 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ### Added
 
+- Stochastic, time-series momentum, and Williams %R strategies
 - Gorilla app icon (favicon, Apple touch icon, PWA icons) and header brand mark
 - Header badge showing the frontend package version
 - Live top-50 S&P, Nasdaq, US ETF, and crypto lists for the asset selector

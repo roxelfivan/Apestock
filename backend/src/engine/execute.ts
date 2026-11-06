@@ -26,6 +26,9 @@ export const STRATEGIES = new Set<StrategyName>([
   "MACD",
   "BOLLINGER",
   "DONCHIAN",
+  "STOCHASTIC",
+  "MOMENTUM",
+  "WILLIAMS_R",
   "BUY_HOLD",
 ]);
 export const ASSET_TYPES = new Set<AssetType>(["STOCK", "CRYPTO"]);
@@ -69,7 +72,7 @@ export function parseBacktestRequest(body: BacktestRequest): ParsedRequest {
   if (!ASSET_TYPES.has(assetType)) throw new ValidationError("assetType must be STOCK or CRYPTO.");
   if (!STRATEGIES.has(strategy)) {
     throw new ValidationError(
-      "strategy must be MA_CROSSOVER, EMA_CROSSOVER, RSI, MACD, BOLLINGER, DONCHIAN, or BUY_HOLD.",
+      "strategy must be MA_CROSSOVER, EMA_CROSSOVER, RSI, MACD, BOLLINGER, DONCHIAN, STOCHASTIC, MOMENTUM, WILLIAMS_R, or BUY_HOLD.",
     );
   }
   if (!Number.isFinite(startingCapital) || startingCapital <= 0) {

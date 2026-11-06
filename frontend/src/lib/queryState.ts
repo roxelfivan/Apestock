@@ -8,6 +8,9 @@ const STRATEGIES = new Set<StrategyName>([
   "MACD",
   "BOLLINGER",
   "DONCHIAN",
+  "STOCHASTIC",
+  "MOMENTUM",
+  "WILLIAMS_R",
   "BUY_HOLD",
 ]);
 
@@ -40,6 +43,9 @@ export function configFromSearch(search: string): Partial<BacktestConfig> {
   if (q.get("bbPeriod")) next.params = { ...next.params, bbPeriod: num(q.get("bbPeriod"), 20) };
   if (q.get("bbStdDev")) next.params = { ...next.params, bbStdDev: num(q.get("bbStdDev"), 2) };
   if (q.get("donchianPeriod")) next.params = { ...next.params, donchianPeriod: num(q.get("donchianPeriod"), 20) };
+  if (q.get("kPeriod")) next.params = { ...next.params, kPeriod: num(q.get("kPeriod"), 14) };
+  if (q.get("lookback")) next.params = { ...next.params, lookback: num(q.get("lookback"), 20) };
+  if (q.get("wrPeriod")) next.params = { ...next.params, wrPeriod: num(q.get("wrPeriod"), 14) };
   if (q.get("capital")) next.startingCapital = num(q.get("capital"), 10_000);
   if (q.get("tradePercent")) next.tradePercent = num(q.get("tradePercent"), 20);
   if (["1Y", "3Y", "5Y", "CUSTOM"].includes(q.get("timeframe") ?? "")) {

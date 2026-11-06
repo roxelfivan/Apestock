@@ -52,6 +52,12 @@ export function warmupBars(strategy: StrategyName, params: StrategyParams): numb
       return requireInt(params.bbPeriod ?? 20, "bbPeriod", 2) + 2;
     case "DONCHIAN":
       return requireInt(params.donchianPeriod ?? 20, "donchianPeriod", 2) + 1;
+    case "STOCHASTIC":
+      return requireInt(params.kPeriod ?? 14, "kPeriod", 2) + 1;
+    case "MOMENTUM":
+      return requireInt(params.lookback ?? 20, "lookback", 2) + 2;
+    case "WILLIAMS_R":
+      return requireInt(params.wrPeriod ?? 14, "wrPeriod", 2) + 1;
     case "BUY_HOLD":
       return 2;
     default:
@@ -196,6 +202,83 @@ export function computeSignals(
     return { signals, minBars: period + 1, series: { donchianHigh: channelHigh, donchianLow: channelLow } };
   }
 
-  signals[0] = "BUY";
-  return { signals, minBars: 2, series: {} };
+  if (strategy === "STOCHASTIC") {
+    const kPeriod = requireInt(params.kPeriod ?? 14, "kPeriod", 2);
+    const oversold = requireNumber(params.oversold ?? 20, "oversold");
+    const overbought = requireNumber(params.overbought ?? 80, "overbought");
+    if (oversold <= 0 || overbought >= 100 || oversold >= overbought) {
+      throw new ValidationError("oversold must be below overbought, within 0–100.");
+    }
+    const percentK: Array<number | null> = Array(bars.length).fill(null);
+    for (let i = kPeriod - 1; i < bars.length; i += 1) {
+      let lowest = lows[i];
+      let highest = highs[i];
+      for (let j = i - kPeriod + 1; j < i; j += 1) {
+        lowest = Math.min(lowest, lows[j]);
+        highest = Math.max(highest, highs[j]);
+      }
+      const range = highest - lowest;
+      percentK[i] = range === 0 ? 50 : ((closes[i] - lowest) / range) * 100;
+    }
+    for (let i = 1; i < bars.length; i += 1) {
+      const prev = percentK[i - 1];
+      const current = percentK[i];
+      if (prev == null || current == null) continue;
+      if (prev <= oversold && current > oversold) signals[i] = "BUY";
+      else if (prev >= overbought && current < overbought) signals[i] = "SELL";
+    }
+    return { signals, minBars: kPeriod + 1, series: { stochK: percentK } };
+  }
+
+  if (strategy === "MOMENTUM") {
+    const lookback = requireInt(params.lookback ?? 20, "lookback", 2);
+    const momentum: Array<number | null> = Array(bars.length).fill(null);
+    for (let i = lookback; i < bars.length; i += 1) {
+      const base = closes[i - lookback];
+      momentum[i] = base > 0 ? closes[i] / base - 1 : null;
+    }
+    for (let i = lookback + 1; i < bars.length; i += 1) {
+      const prev = momentum[i - 1];
+      const current = momentum[i];
+      if (prev == null || current == null) continue;
+      if (prev <= 0 && current > 0) signals[i] = "BUY";
+      else if (prev >= 0 && current < 0) signals[i] = "SELL";
+    }
+    return { signals, minBars: lookback + 2, series: { momentum } };
+  }
+
+  if (strategy === "WILLIAMS_R") {
+    const wrPeriod = requireInt(params.wrPeriod ?? 14, "wrPeriod", 2);
+    const oversold = requireNumber(params.oversold ?? -80, "oversold");
+    const overbought = requireNumber(params.overbought ?? -20, "overbought");
+    if (oversold >= overbought || oversold <= -100 || overbought >= 0) {
+      throw new ValidationError("Williams %R oversold must be below overbought, inside -100–0.");
+    }
+    const williams: Array<number | null> = Array(bars.length).fill(null);
+    for (let i = wrPeriod - 1; i < bars.length; i += 1) {
+      let lowest = lows[i];
+      let highest = highs[i];
+      for (let j = i - wrPeriod + 1; j < i; j += 1) {
+        lowest = Math.min(lowest, lows[j]);
+        highest = Math.max(highest, highs[j]);
+      }
+      const range = highest - lowest;
+      williams[i] = range === 0 ? -50 : ((highest - closes[i]) / range) * -100;
+    }
+    for (let i = 1; i < bars.length; i += 1) {
+      const prev = williams[i - 1];
+      const current = williams[i];
+      if (prev == null || current == null) continue;
+      if (prev <= oversold && current > oversold) signals[i] = "BUY";
+      else if (prev >= overbought && current < overbought) signals[i] = "SELL";
+    }
+    return { signals, minBars: wrPeriod + 1, series: { williamsR: williams } };
+  }
+
+  if (strategy === "BUY_HOLD") {
+    signals[0] = "BUY";
+    return { signals, minBars: 2, series: {} };
+  }
+
+  throw new ValidationError("Unsupported strategy.");
 }

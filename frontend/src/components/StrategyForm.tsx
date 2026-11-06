@@ -204,6 +204,81 @@ export default function StrategyForm({
         </div>
       ) : null}
 
+      {strategy === "STOCHASTIC" ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="kPeriod"
+            label="%K period"
+            min={2}
+            value={params.kPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ kPeriod: value })}
+          />
+          <NumberField
+            id="stochOversold"
+            label="Oversold (buy)"
+            min={1}
+            max={49}
+            value={params.oversold}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ oversold: value })}
+          />
+          <NumberField
+            id="stochOverbought"
+            label="Overbought (sell)"
+            min={51}
+            max={99}
+            value={params.overbought}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "MOMENTUM" ? (
+        <div className="mt-4">
+          <NumberField
+            id="lookback"
+            label="Lookback (days)"
+            min={2}
+            value={params.lookback}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ lookback: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "WILLIAMS_R" ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="wrPeriod"
+            label="%R period"
+            min={2}
+            value={params.wrPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ wrPeriod: value })}
+          />
+          <NumberField
+            id="wrOversold"
+            label="Oversold (buy)"
+            min={-99}
+            max={-51}
+            value={params.oversold}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ oversold: value })}
+          />
+          <NumberField
+            id="wrOverbought"
+            label="Overbought (sell)"
+            min={-49}
+            max={-1}
+            value={params.overbought}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
       {strategy === "BUY_HOLD" ? (
         <p className="mt-4 text-xs text-slate-400">
           Invests 100% of cash on the first fill (T+1 open). Trade size is ignored.
