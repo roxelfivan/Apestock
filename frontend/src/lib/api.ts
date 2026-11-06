@@ -2,6 +2,7 @@ import type {
   ApiError,
   BacktestConfig,
   BacktestResult,
+  PriceSyncResult,
   SweepResult,
   UniverseSnapshot,
   WalkForwardResult,
@@ -49,6 +50,19 @@ export function runSweep(config: BacktestConfig): Promise<SweepResult> {
 
 export function runWalkForward(config: BacktestConfig): Promise<WalkForwardResult> {
   return postJson("/api/backtest/walk-forward", config);
+}
+
+export async function syncPrices(ticker: string, assetType: BacktestConfig["assetType"]): Promise<PriceSyncResult> {
+  const response = await fetch("/api/prices/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), assetType }),
+  });
+  const payload = (await response.json()) as PriceSyncResult & ApiError;
+  if (!response.ok) {
+    throw new Error(payload.error || "Unable to sync prices.");
+  }
+  return payload;
 }
 
 export async function fetchUniverse(): Promise<UniverseSnapshot> {

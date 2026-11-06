@@ -10,7 +10,7 @@ import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
 import { isValidTicker, readStoredUniverse, storeUniverse, universeFor } from "./data/universes";
-import { fetchUniverse, runBacktest, runSweep, runWalkForward } from "./lib/api";
+import { fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
 import { DEFAULT_PARAMS } from "./lib/defaults";
 import { loadRuns, saveRun } from "./lib/history";
 import { configFromSearch, searchFromConfig } from "./lib/queryState";
@@ -24,6 +24,7 @@ import type {
   StrategyName,
   SweepResult,
   Timeframe,
+  PriceSyncResult,
   UniverseSnapshot,
   WalkForwardResult,
 } from "./types";
@@ -67,6 +68,7 @@ export default function App() {
   const [universe, setUniverse] = useState<UniverseSnapshot | null>(() => readStoredUniverse());
   const [universeLoading, setUniverseLoading] = useState(() => !readStoredUniverse());
   const [universeError, setUniverseError] = useState("");
+  const [priceSync, setPriceSync] = useState<PriceSyncResult | null>(null);
 
   const tickerValid = useMemo(
     () => allowAnySymbol || isValidTicker(ticker, assetType, universe),
@@ -135,6 +137,18 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const symbol = ticker.trim().toUpperCase();
+    if (!symbol) return;
+    if (universe && !allowAnySymbol && !isValidTicker(symbol, assetType, universe)) return;
+    const handle = window.setTimeout(() => {
+      void syncPrices(symbol, assetType)
+        .then(setPriceSync)
+        .catch(() => undefined);
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [ticker, assetType, allowAnySymbol, universe]);
 
   function markStale() {
     if (result) setStale(true);
@@ -275,6 +289,7 @@ export default function App() {
               universe={universe}
               universeLoading={universeLoading}
               universeError={universeError}
+              priceSync={priceSync}
               onAssetTypeChange={handleAssetTypeChange}
               onTickerChange={handleTickerChange}
               onAllowAnySymbolChange={(value) => {

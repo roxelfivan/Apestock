@@ -3,6 +3,7 @@ import { sliceFor } from "../data/universe.js";
 import { httpStatus } from "../errors.js";
 import { executeBacktest } from "../engine/execute.js";
 import { executeSweep, executeWalkForward } from "../engine/research.js";
+import { syncSymbolPrices } from "../services/dataService.js";
 import { getUniverseSnapshot } from "../services/universeService.js";
 import type { AssetType, BacktestRequest } from "../types.js";
 
@@ -58,6 +59,21 @@ export async function getUniverse(req: Request, res: Response): Promise<Response
       symbols: slice.symbols,
       groups: slice.groups,
     });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function syncPrices(req: Request, res: Response): Promise<Response> {
+  try {
+    const body = (req.body ?? {}) as { ticker?: string; assetType?: string };
+    const ticker = typeof body.ticker === "string" ? body.ticker.trim().toUpperCase() : "";
+    const assetType = String(body.assetType ?? "").toUpperCase() as AssetType;
+    if (!ticker) return res.status(400).json({ error: "Missing ticker." });
+    if (assetType !== "STOCK" && assetType !== "CRYPTO") {
+      return res.status(400).json({ error: "assetType must be STOCK or CRYPTO." });
+    }
+    return res.json(await syncSymbolPrices(ticker, assetType));
   } catch (error) {
     return handleError(res, error);
   }

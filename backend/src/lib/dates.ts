@@ -25,6 +25,58 @@ export function utcToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+function shiftYmd(year: number, month: number, day: number, delta: number): {
+  year: number;
+  month: number;
+  day: number;
+  weekday: (typeof WEEKDAYS)[number];
+} {
+  const date = new Date(Date.UTC(year, month - 1, day + delta));
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    weekday: WEEKDAYS[date.getUTCDay()],
+  };
+}
+
+function nyParts(now: Date): { year: number; month: number; day: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  return {
+    year: value("year"),
+    month: value("month"),
+    day: value("day"),
+    hour: value("hour"),
+    minute: value("minute"),
+  };
+}
+
+/** Latest session whose daily bar should be complete (US 4pm ET + 1h buffer; crypto = prior UTC day). */
+export function latestCompleteSession(assetType: AssetType, now = new Date()): string {
+  if (assetType === "CRYPTO") {
+    return addUtcDays(now.toISOString().slice(0, 10), -1);
+  }
+
+  const ny = nyParts(now);
+  const closed = ny.hour > 17 || (ny.hour === 17 && ny.minute >= 0);
+  let cursor = shiftYmd(ny.year, ny.month, ny.day, closed ? 0 : -1);
+  while (cursor.weekday === "Sat" || cursor.weekday === "Sun") {
+    cursor = shiftYmd(cursor.year, cursor.month, cursor.day, -1);
+  }
+  return `${cursor.year}-${String(cursor.month).padStart(2, "0")}-${String(cursor.day).padStart(2, "0")}`;
+}
+
 export function daysBetween(start: string, end: string): number {
   const a = Date.parse(`${start}T00:00:00.000Z`);
   const b = Date.parse(`${end}T00:00:00.000Z`);

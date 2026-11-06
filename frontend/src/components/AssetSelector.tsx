@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import type { AssetType, UniverseSnapshot } from "../types";
+import type { AssetType, PriceSyncResult, UniverseSnapshot } from "../types";
 import { isValidTicker, universeFor, universeGroups } from "../data/universes";
 
 interface AssetSelectorProps {
@@ -9,6 +9,7 @@ interface AssetSelectorProps {
   universe: UniverseSnapshot | null;
   universeLoading: boolean;
   universeError: string;
+  priceSync: PriceSyncResult | null;
   onAssetTypeChange: (assetType: AssetType) => void;
   onTickerChange: (ticker: string) => void;
   onAllowAnySymbolChange: (value: boolean) => void;
@@ -27,6 +28,7 @@ export default function AssetSelector({
   universe,
   universeLoading,
   universeError,
+  priceSync,
   onAssetTypeChange,
   onTickerChange,
   onAllowAnySymbolChange,
@@ -310,6 +312,12 @@ export default function AssetSelector({
                 ? `Type a ticker or pick from the list. Live ${universeLabel} names (${symbols.length} unique${universe?.fetchedAt ? `, as of ${universe.fetchedAt.slice(0, 10)}` : ""}).`
                 : `${normalized} is not in the ${universeLabel} universe.`}
       </p>
+      {priceSync && priceSync.ticker === normalized && priceSync.lastBar ? (
+        <p className="mt-1 text-xs text-slate-500">
+          Saved daily bars through {priceSync.lastBar}
+          {priceSync.downloaded ? " (updated from Yahoo)" : " (local cache)"}.
+        </p>
+      ) : null}
     </section>
   );
 }

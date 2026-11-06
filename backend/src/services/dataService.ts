@@ -1,16 +1,8 @@
+import { addUtcDays, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
+import { mergeBars, readStoredPrices, writeStoredPrices } from "./priceStore.js";
 import { yahooFinance } from "./yahooClient.js";
 
-/** In-process cache only: reuse Yahoo bars for repeat backtests of the same window. */
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const CACHE_MAX_ENTRIES = 256;
-
-interface CacheEntry {
-  bars: OhlcBar[];
-  expiresAt: number;
-}
-
-const priceCache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
 function isFiniteNumber(value: unknown): value is number {
@@ -31,29 +23,8 @@ function cloneBars(bars: OhlcBar[]): OhlcBar[] {
   return bars.map((bar) => ({ ...bar }));
 }
 
-function cacheKey(symbol: string, startDate: string, endDate: string): string {
-  return `${symbol}|${startDate}|${endDate}|1d`;
-}
-
-function readCache(key: string): OhlcBar[] | null {
-  const entry = priceCache.get(key);
-  if (!entry) return null;
-  if (Date.now() >= entry.expiresAt) {
-    priceCache.delete(key);
-    return null;
-  }
-  priceCache.delete(key);
-  priceCache.set(key, entry);
-  return cloneBars(entry.bars);
-}
-
-function writeCache(key: string, bars: OhlcBar[]): void {
-  while (priceCache.size >= CACHE_MAX_ENTRIES) {
-    const oldest = priceCache.keys().next().value;
-    if (oldest === undefined) break;
-    priceCache.delete(oldest);
-  }
-  priceCache.set(key, { bars: cloneBars(bars), expiresAt: Date.now() + CACHE_TTL_MS });
+function minDate(a: string, b: string): string {
+  return a <= b ? a : b;
 }
 
 export class DataError extends Error {
@@ -84,11 +55,13 @@ function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown; low?: 
 }
 
 async function downloadHistoricalData(symbol: string, startDate: string, endDate: string): Promise<OhlcBar[]> {
+  if (startDate > endDate) return [];
+
   let quotes: Array<{ date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }>;
   try {
     const result = await yahooFinance.chart(symbol, {
       period1: startDate,
-      period2: endDate,
+      period2: addUtcDays(endDate, 1),
       interval: "1d",
       return: "array",
     });
@@ -98,13 +71,10 @@ async function downloadHistoricalData(symbol: string, startDate: string, endDate
     throw new DataError(`Unable to fetch historical data for ${symbol}: ${reason}`);
   }
 
-  if (quotes.length === 0) {
-    throw new DataError(`No historical data returned for ${symbol}.`);
-  }
-
   const bars = quotes
     .map(toOhlcBar)
     .filter((bar): bar is OhlcBar => bar !== null)
+    .filter((bar) => bar.date >= startDate && bar.date <= endDate)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const unique: OhlcBar[] = [];
@@ -114,17 +84,61 @@ async function downloadHistoricalData(symbol: string, startDate: string, endDate
     seen.add(bar.date);
     unique.push(bar);
   }
+  return unique;
+}
 
-  if (unique.length === 0) {
-    throw new DataError(`Data gap: no valid OHLC bars for ${symbol}.`);
+function sliceBars(bars: OhlcBar[], startDate: string, endDate: string): OhlcBar[] {
+  return bars.filter((bar) => bar.date >= startDate && bar.date <= endDate);
+}
+
+async function loadCoveredBars(
+  symbol: string,
+  assetType: AssetType,
+  startDate: string,
+  endDate: string,
+): Promise<OhlcBar[]> {
+  const stored = await readStoredPrices(symbol);
+  let bars = stored?.bars ?? [];
+  const first = bars[0]?.date;
+  const last = bars[bars.length - 1]?.date;
+  const downloads: Array<Promise<OhlcBar[]>> = [];
+
+  if (bars.length === 0) {
+    downloads.push(downloadHistoricalData(symbol, startDate, endDate));
+  } else {
+    if (first && first > startDate) {
+      downloads.push(downloadHistoricalData(symbol, startDate, addUtcDays(first, -1)));
+    }
+    if (last && last < endDate) {
+      downloads.push(downloadHistoricalData(symbol, last, endDate));
+    }
   }
 
-  return unique;
+  if (downloads.length > 0) {
+    const fetched = await Promise.all(downloads);
+    const next = mergeBars(bars, ...fetched);
+    if (next.length === 0) {
+      throw new DataError(`No historical data returned for ${symbol}.`);
+    }
+    bars = next;
+    await writeStoredPrices({
+      symbol,
+      assetType,
+      bars,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  const window = sliceBars(bars, startDate, endDate);
+  if (window.length === 0) {
+    throw new DataError(`Data gap: no valid OHLC bars for ${symbol}.`);
+  }
+  return window;
 }
 
 export async function fetchHistoricalData(
   ticker: string,
-  _assetType: AssetType,
+  assetType: AssetType,
   startDate: string,
   endDate: string,
 ): Promise<OhlcBar[]> {
@@ -137,22 +151,50 @@ export async function fetchHistoricalData(
     throw new DataError("Missing ticker.");
   }
 
-  const key = cacheKey(symbol, startDate, endDate);
-  const cached = readCache(key);
-  if (cached) return cached;
+  const targetEnd = minDate(endDate, latestCompleteSession(assetType));
+  const targetStart = startDate > targetEnd ? targetEnd : startDate;
+  const key = `${symbol}|${targetStart}|${targetEnd}|1d`;
 
   const pending = inflight.get(key);
   if (pending) return cloneBars(await pending);
 
-  const request = downloadHistoricalData(symbol, startDate, endDate)
-    .then((bars) => {
-      writeCache(key, bars);
-      return bars;
-    })
-    .finally(() => {
-      inflight.delete(key);
-    });
-
+  const request = loadCoveredBars(symbol, assetType, targetStart, targetEnd).finally(() => {
+    inflight.delete(key);
+  });
   inflight.set(key, request);
   return cloneBars(await request);
+}
+
+const WARM_HISTORY_DAYS = 365 * 5 + 250;
+
+export interface PriceSyncResult {
+  ticker: string;
+  assetType: AssetType;
+  lastBar: string | null;
+  completeThrough: string;
+  downloaded: boolean;
+  barCount: number;
+}
+
+export async function syncSymbolPrices(ticker: string, assetType: AssetType): Promise<PriceSyncResult> {
+  const symbol = ticker.trim().toUpperCase();
+  const completeThrough = latestCompleteSession(assetType);
+  const before = await readStoredPrices(symbol);
+  const start = addUtcDays(completeThrough, -WARM_HISTORY_DAYS);
+  const bars = await fetchHistoricalData(symbol, assetType, start, completeThrough);
+  const after = await readStoredPrices(symbol);
+  const lastBar = bars[bars.length - 1]?.date ?? null;
+  const downloaded = !before || (before.bars.at(-1)?.date ?? "") < (after?.bars.at(-1)?.date ?? "");
+  return {
+    ticker: symbol,
+    assetType,
+    lastBar,
+    completeThrough,
+    downloaded,
+    barCount: bars.length,
+  };
+}
+
+export function priceWindowEnd(assetType: AssetType, requestedEnd: string): string {
+  return minDate(requestedEnd, latestCompleteSession(assetType));
 }
