@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import packageJson from "../package.json";
 import AssetSelector from "./components/AssetSelector";
 import DrawdownChart from "./components/DrawdownChart";
 import MetricsDashboard from "./components/MetricsDashboard";
@@ -211,13 +212,27 @@ export default function App() {
     <div className="min-h-screen bg-slate-950">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              Curated large-cap, ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
-              strategies, optional costs, and inspectable trades. Signals on the close; fills at the next open.
-            </p>
+          <div className="flex items-start gap-4">
+            <img
+              src="/app-icon.png"
+              alt=""
+              width={56}
+              height={70}
+              className="h-14 w-auto shrink-0 rounded-2xl bg-slate-950 ring-1 ring-emerald-400/25"
+            />
+            <div>
+              <p className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</span>
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-300">
+                  v{packageJson.version}
+                </span>
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Curated large-cap, ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
+                strategies, optional costs, and inspectable trades. Signals on the close; fills at the next open.
+              </p>
+            </div>
           </div>
           <div className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400">
             long only · T+1 open · warmup before the test window
