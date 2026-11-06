@@ -19,7 +19,7 @@ Current version: **0.0.1**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 
 ## Price cache
 
-Daily OHLC is saved on the backend under `data/prices/{SYMBOL}.json`. Repeat runs reuse that file. Yahoo is called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`) so the store is current without downloading the whole universe.
+Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`; on Vercel/Lambda it uses `/tmp` plus in-memory storage because `/var/task` is read-only. Yahoo is called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`) so the store is current without downloading the whole universe. Disk write failures are ignored so a backtest still runs.
 
 ## Strategies
 
