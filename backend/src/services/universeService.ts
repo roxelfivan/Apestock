@@ -110,7 +110,110 @@ async function loadTopNasdaq50(): Promise<string[]> {
   return takeSymbols(quotes, "EQUITY", 50);
 }
 
-async function loadTopUsEtfs(): Promise<string[]> {
+const STOCK_ETF_CATEGORIES = [
+  "Large Blend",
+  "Large Growth",
+  "Large Value",
+  "Mid-Cap Blend",
+  "Mid-Cap Growth",
+  "Mid-Cap Value",
+  "Small Blend",
+  "Small Growth",
+  "Small Value",
+  "Foreign Large Blend",
+  "Foreign Large Growth",
+  "Foreign Large Value",
+  "Foreign Small/Mid Blend",
+  "Foreign Small/Mid Growth",
+  "Foreign Small/Mid Value",
+  "Diversified Emerging Mkts",
+  "Diversified Pacific/Asia",
+  "Europe Stock",
+  "China Region",
+  "Japan Stock",
+  "India Equity",
+  "Latin America Stock",
+  "Pacific/Asia ex-Japan Stk",
+  "Communications",
+  "Consumer Cyclical",
+  "Consumer Defensive",
+  "Equity Energy",
+  "Energy Limited Partnership",
+  "Financial",
+  "Health",
+  "Industrials",
+  "Natural Resources",
+  "Real Estate",
+  "Technology",
+  "Utilities",
+  "Infrastructure",
+  "Global Large-Stock Blend",
+  "Global Large-Stock Growth",
+  "Global Large-Stock Value",
+  "World Large-Stock Blend",
+  "World Large-Stock Growth",
+  "World Large-Stock Value",
+  "World Small/Mid Stock",
+  "Equity Precious Metals",
+  "Derivative Income",
+  "Options Trading",
+  "Trading--Leveraged Equity",
+  "Trading--Inverse Equity",
+  "Miscellaneous Sector",
+];
+
+const BOND_ETF_CATEGORIES = [
+  "Intermediate Core Bond",
+  "Intermediate Core-Plus Bond",
+  "Intermediate Government",
+  "Short Government",
+  "Short-Term Bond",
+  "Ultrashort Bond",
+  "Long Government",
+  "Long-Term Bond",
+  "Corporate Bond",
+  "High Yield Bond",
+  "Inflation-Protected Bond",
+  "Bank Loan",
+  "Multisector Bond",
+  "Nontraditional Bond",
+  "World Bond",
+  "World Bond-USD Hedged",
+  "Emerging Markets Bond",
+  "Emerging-Markets Local-Currency Bond",
+  "Muni National Interm",
+  "Muni National Long",
+  "Muni National Short",
+  "High Yield Muni",
+  "Muni California Intermediate",
+  "Muni California Long",
+  "Muni New York Intermediate",
+  "Muni New York Long",
+  "Preferred Stock",
+  "Money Market-Taxable",
+  "Money Market-Tax-Free",
+];
+
+const OTHER_ETF_CATEGORIES = [
+  "Commodities Broad Basket",
+  "Commodities Focused",
+  "Commodities Agriculture",
+  "Commodities Energy",
+  "Commodities Precious Metals",
+  "Digital Assets",
+  "Multicurrency",
+  "Single Currency",
+  "Conservative Allocation",
+  "Moderate Allocation",
+  "Aggressive Allocation",
+  "Tactical Allocation",
+  "Global Allocation",
+  "Trading--Leveraged Commodities",
+  "Trading--Inverse Commodities",
+  "Volatility",
+];
+
+async function loadTopEtfsByCategories(categories: string[]): Promise<string[]> {
   const quotes = await screenQuotes({
     size: 50,
     offset: 0,
@@ -119,7 +222,13 @@ async function loadTopUsEtfs(): Promise<string[]> {
     quoteType: "ETF",
     query: {
       operator: "AND",
-      operands: [{ operator: "eq", operands: ["region", "us"] }],
+      operands: [
+        { operator: "eq", operands: ["region", "us"] },
+        {
+          operator: "or",
+          operands: categories.map((name) => ({ operator: "eq", operands: ["categoryname", name] })),
+        },
+      ],
     },
   });
   return takeSymbols(quotes, "ETF", 50);
@@ -161,17 +270,21 @@ function requireCount(label: string, symbols: string[], min = 40): string[] {
 }
 
 async function downloadSnapshot(): Promise<UniverseSnapshot> {
-  const [sp50, nasdaq50, etf50, crypto50] = await Promise.all([
+  const [sp50, nasdaq50, stockEtfs, bondEtfs, otherEtfs, crypto50] = await Promise.all([
     loadTopSp50(),
     loadTopNasdaq50(),
-    loadTopUsEtfs(),
+    loadTopEtfsByCategories(STOCK_ETF_CATEGORIES),
+    loadTopEtfsByCategories(BOND_ETF_CATEGORIES),
+    loadTopEtfsByCategories(OTHER_ETF_CATEGORIES),
     loadTopCrypto(),
   ]);
 
   const stockGroups: UniverseGroup[] = [
     { label: "Top 50 S&P", symbols: requireCount("Top 50 S&P", sp50) },
     { label: "Top 50 Nasdaq", symbols: requireCount("Top 50 Nasdaq", nasdaq50) },
-    { label: "Top 50 US ETF", symbols: requireCount("Top 50 US ETF", etf50) },
+    { label: "Top 50 stock ETF", symbols: requireCount("Top 50 stock ETF", stockEtfs) },
+    { label: "Top 50 bond ETF", symbols: requireCount("Top 50 bond ETF", bondEtfs) },
+    { label: "Top 50 non stock non bond ETF", symbols: requireCount("Top 50 non stock non bond ETF", otherEtfs) },
   ];
   const cryptoGroups: UniverseGroup[] = [
     { label: "Top 50 crypto", symbols: requireCount("Top 50 crypto", crypto50) },

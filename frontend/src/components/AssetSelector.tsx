@@ -154,7 +154,7 @@ export default function AssetSelector({
   const universeLabel =
     assetType === "CRYPTO"
       ? "top 50 crypto"
-      : "top 50 S&P, top 50 Nasdaq, and top 50 US ETF";
+      : "top 50 S&P, Nasdaq, stock ETF, bond ETF, and non-stock/non-bond ETF";
 
   let optionCursor = 0;
 
