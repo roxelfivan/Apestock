@@ -1,11 +1,14 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import type { AssetType } from "../types";
+import type { AssetType, UniverseSnapshot } from "../types";
 import { isValidTicker, universeFor, universeGroups } from "../data/universes";
 
 interface AssetSelectorProps {
   assetType: AssetType;
   ticker: string;
   allowAnySymbol: boolean;
+  universe: UniverseSnapshot | null;
+  universeLoading: boolean;
+  universeError: string;
   onAssetTypeChange: (assetType: AssetType) => void;
   onTickerChange: (ticker: string) => void;
   onAllowAnySymbolChange: (value: boolean) => void;
@@ -21,6 +24,9 @@ export default function AssetSelector({
   assetType,
   ticker,
   allowAnySymbol,
+  universe,
+  universeLoading,
+  universeError,
   onAssetTypeChange,
   onTickerChange,
   onAllowAnySymbolChange,
@@ -34,10 +40,13 @@ export default function AssetSelector({
   const [seenType, setSeenType] = useState(assetType);
   const [seenQuery, setSeenQuery] = useState(ticker.trim().toUpperCase());
 
-  const universe = universeFor(assetType);
-  const groups = universeGroups(assetType);
+  const symbols = universe ? universeFor(universe, assetType) : [];
+  const groups = useMemo(
+    () => (universe ? universeGroups(universe, assetType) : []),
+    [universe, assetType],
+  );
   const normalized = ticker.trim().toUpperCase();
-  const valid = allowAnySymbol || !normalized || isValidTicker(normalized, assetType);
+  const valid = allowAnySymbol || !normalized || isValidTicker(normalized, assetType, universe);
   const query = normalized;
 
   if (assetType !== seenType) {
@@ -232,7 +241,11 @@ export default function AssetSelector({
             role="listbox"
             className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-700 bg-slate-950 py-1 shadow-2xl shadow-black/40"
           >
-            {flatOptions.length === 0 ? (
+            {universeLoading && groups.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-slate-500">Loading ranked tickers…</li>
+            ) : universeError && groups.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-rose-400">{universeError}</li>
+            ) : flatOptions.length === 0 ? (
               <li className="px-3 py-2 text-xs text-slate-500">No tickers match {normalized}.</li>
             ) : (
               filteredGroups.map((group) => (
@@ -287,11 +300,15 @@ export default function AssetSelector({
         Allow any Yahoo symbol (not just the curated list)
       </label>
       <p className={`mt-2 text-xs ${valid ? "text-slate-500" : "text-rose-400"}`}>
-        {allowAnySymbol
-          ? `Open symbol search. Lists still show ${universeLabel} names (${universe.length} unique) as shortcuts.`
-          : valid
-            ? `Type a ticker or pick from the list. Validated against ${universeLabel} names (${universe.length} unique).`
-            : `${normalized} is not in the ${universeLabel} universe.`}
+        {universeLoading && symbols.length === 0
+          ? "Loading live top-50 lists from Yahoo (cached for 6 hours)."
+          : universeError && symbols.length === 0
+            ? universeError
+            : allowAnySymbol
+              ? `Open symbol search. Lists still show ${universeLabel} names (${symbols.length} unique) as shortcuts.`
+              : valid
+                ? `Type a ticker or pick from the list. Live ${universeLabel} names (${symbols.length} unique${universe?.fetchedAt ? `, as of ${universe.fetchedAt.slice(0, 10)}` : ""}).`
+                : `${normalized} is not in the ${universeLabel} universe.`}
       </p>
     </section>
   );

@@ -178,3 +178,19 @@ export interface SavedRun {
 export interface ApiError {
   error?: string;
 }
+
+export interface UniverseGroup {
+  label: string;
+  symbols: string[];
+}
+
+export interface UniverseSlice {
+  symbols: string[];
+  groups: UniverseGroup[];
+}
+
+export interface UniverseSnapshot {
+  fetchedAt: string;
+  stock: UniverseSlice;
+  crypto: UniverseSlice;
+}
