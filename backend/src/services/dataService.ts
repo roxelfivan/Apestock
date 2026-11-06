@@ -6,10 +6,6 @@ import { yahooFinance } from "./yahooClient.js";
 
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
 function toDateString(value: unknown): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 10);
@@ -28,22 +24,21 @@ function minDate(a: string, b: string): string {
   return a <= b ? a : b;
 }
 
-function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }): OhlcBar | null {
+function isPositivePrice(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/** Yahoo often emits today's session with close/adjclose still null; Number(null) is 0. */
+export function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }): OhlcBar | null {
   const date = toDateString(row.date);
-  const open = Number(row.open);
-  const high = Number(row.high);
-  const low = Number(row.low);
-  const close = Number(row.close);
-  if (
-    !date ||
-    !isFiniteNumber(open) ||
-    !isFiniteNumber(high) ||
-    !isFiniteNumber(low) ||
-    !isFiniteNumber(close)
-  ) {
+  if (!date || !isPositivePrice(row.open) || !isPositivePrice(row.high) || !isPositivePrice(row.low) || !isPositivePrice(row.close)) {
     return null;
   }
-  return { date, open, high, low, close };
+  return { date, open: row.open, high: row.high, low: row.low, close: row.close };
+}
+
+export function isCompleteOhlc(bar: OhlcBar): boolean {
+  return toOhlcBar(bar) !== null;
 }
 
 async function downloadHistoricalData(symbol: string, startDate: string, endDate: string): Promise<OhlcBar[]> {
@@ -90,7 +85,9 @@ async function loadCoveredBars(
   endDate: string,
 ): Promise<OhlcBar[]> {
   const stored = await readStoredPrices(symbol);
-  let bars = stored?.bars ?? [];
+  const storedBars = stored?.bars ?? [];
+  let bars = storedBars.filter(isCompleteOhlc);
+  const droppedIncomplete = bars.length !== storedBars.length;
   const first = bars[0]?.date;
   const last = bars[bars.length - 1]?.date;
   const downloads: Array<Promise<OhlcBar[]>> = [];
@@ -113,6 +110,13 @@ async function loadCoveredBars(
       throw new DataError(`No historical data returned for ${symbol}.`);
     }
     bars = next;
+    await writeStoredPrices({
+      symbol,
+      assetType,
+      bars,
+      updatedAt: new Date().toISOString(),
+    });
+  } else if (droppedIncomplete && bars.length > 0) {
     await writeStoredPrices({
       symbol,
       assetType,

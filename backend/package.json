@@ -7,7 +7,7 @@
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/engine/engine.test.ts src/errors.test.ts src/lib/dates.test.ts src/services/priceStore.test.ts"
+    "test": "tsx --test src/engine/engine.test.ts src/errors.test.ts src/lib/dates.test.ts src/services/priceStore.test.ts src/services/ohlc.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
