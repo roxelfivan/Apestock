@@ -11,7 +11,8 @@ Current version: **0.0.1**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 
 ## Universe
 
-- US stocks: live top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM
+- US stocks: live top 50 S&P 500 and Nasdaq by market cap
+- US ETFs: live top 50 stock ETFs, top 50 bond ETFs, and top 50 non-stock/non-bond ETFs (commodities, crypto ETFs, allocation) by AUM
 - Crypto: live top 50 by market cap (Yahoo `-USD` pairs)
 - Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours
 - Optional open Yahoo symbol (`allowAnySymbol`)

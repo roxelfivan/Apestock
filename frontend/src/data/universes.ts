@@ -18,7 +18,7 @@ export function isValidTicker(ticker: string, assetType: AssetType, snapshot: Un
   return universeFor(snapshot, assetType).includes(symbol);
 }
 
-export const UNIVERSE_STORAGE_KEY = "apestock.universe.v1";
+export const UNIVERSE_STORAGE_KEY = "apestock.universe.v2";
 
 export function readStoredUniverse(): UniverseSnapshot | null {
   try {
