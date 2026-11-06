@@ -1,9 +1,5 @@
-import YahooFinance from "yahoo-finance2";
 import type { AssetType, OhlcBar } from "../types.js";
-
-const yahooFinance = new YahooFinance({
-  suppressNotices: ["yahooSurvey", "ripHistorical"],
-});
+import { yahooFinance } from "./yahooClient.js";
 
 /** In-process cache only: reuse Yahoo bars for repeat backtests of the same window. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;

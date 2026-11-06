@@ -3,6 +3,7 @@ import type {
   BacktestConfig,
   BacktestResult,
   SweepResult,
+  UniverseSnapshot,
   WalkForwardResult,
 } from "../types";
 
@@ -48,4 +49,16 @@ export function runSweep(config: BacktestConfig): Promise<SweepResult> {
 
 export function runWalkForward(config: BacktestConfig): Promise<WalkForwardResult> {
   return postJson("/api/backtest/walk-forward", config);
+}
+
+export async function fetchUniverse(): Promise<UniverseSnapshot> {
+  const response = await fetch("/api/universe");
+  const payload = (await response.json()) as UniverseSnapshot & ApiError;
+  if (!response.ok) {
+    throw new Error(payload.error || "Unable to load universe.");
+  }
+  if (!payload.stock?.groups || !payload.crypto?.groups) {
+    throw new Error("Universe response was missing ranked groups.");
+  }
+  return payload;
 }

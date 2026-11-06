@@ -9,8 +9,8 @@ import ResearchPanels from "./components/ResearchPanels";
 import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
-import { isValidTicker, universeFor } from "./data/universes";
-import { runBacktest, runSweep, runWalkForward } from "./lib/api";
+import { isValidTicker, readStoredUniverse, storeUniverse, universeFor } from "./data/universes";
+import { fetchUniverse, runBacktest, runSweep, runWalkForward } from "./lib/api";
 import { DEFAULT_PARAMS } from "./lib/defaults";
 import { loadRuns, saveRun } from "./lib/history";
 import { configFromSearch, searchFromConfig } from "./lib/queryState";
@@ -24,6 +24,7 @@ import type {
   StrategyName,
   SweepResult,
   Timeframe,
+  UniverseSnapshot,
   WalkForwardResult,
 } from "./types";
 
@@ -63,10 +64,13 @@ export default function App() {
   const [compareId, setCompareId] = useState<string | null>(null);
   const [sweep, setSweep] = useState<SweepResult | null>(null);
   const [walkForward, setWalkForward] = useState<WalkForwardResult | null>(null);
+  const [universe, setUniverse] = useState<UniverseSnapshot | null>(() => readStoredUniverse());
+  const [universeLoading, setUniverseLoading] = useState(() => !readStoredUniverse());
+  const [universeError, setUniverseError] = useState("");
 
   const tickerValid = useMemo(
-    () => allowAnySymbol || isValidTicker(ticker, assetType),
-    [allowAnySymbol, ticker, assetType],
+    () => allowAnySymbol || isValidTicker(ticker, assetType, universe),
+    [allowAnySymbol, ticker, assetType, universe],
   );
   const formError = paramsError(strategy, params);
   const config = useMemo<BacktestConfig>(
@@ -111,14 +115,37 @@ export default function App() {
     }
   }, [config]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchUniverse()
+      .then((snapshot) => {
+        if (cancelled) return;
+        setUniverse(snapshot);
+        storeUniverse(snapshot);
+        setUniverseError("");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setUniverseError(err instanceof Error ? err.message : "Unable to load ranked tickers.");
+      })
+      .finally(() => {
+        if (!cancelled) setUniverseLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function markStale() {
     if (result) setStale(true);
   }
 
   function handleAssetTypeChange(nextType: AssetType) {
     setAssetType(nextType);
-    const nextUniverse = universeFor(nextType);
-    if (!allowAnySymbol) setTicker(nextUniverse[0]);
+    if (!allowAnySymbol && universe) {
+      const nextSymbols = universeFor(universe, nextType);
+      if (nextSymbols[0]) setTicker(nextSymbols[0]);
+    }
     setResult(null);
     setError("");
     setStale(false);
@@ -229,7 +256,7 @@ export default function App() {
               </p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Curated large-cap, ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
+                Live top-50 S&P, Nasdaq, ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
                 strategies, optional costs, and inspectable trades. Signals on the close; fills at the next open.
               </p>
             </div>
@@ -245,6 +272,9 @@ export default function App() {
               assetType={assetType}
               ticker={ticker}
               allowAnySymbol={allowAnySymbol}
+              universe={universe}
+              universeLoading={universeLoading}
+              universeError={universeError}
               onAssetTypeChange={handleAssetTypeChange}
               onTickerChange={handleTickerChange}
               onAllowAnySymbolChange={(value) => {

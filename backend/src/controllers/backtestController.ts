@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import { CRYPTO_GROUPS, STOCK_GROUPS, universeFor } from "../data/universe.js";
+import { sliceFor } from "../data/universe.js";
 import { httpStatus } from "../errors.js";
 import { executeBacktest } from "../engine/execute.js";
 import { executeSweep, executeWalkForward } from "../engine/research.js";
+import { getUniverseSnapshot } from "../services/universeService.js";
 import type { AssetType, BacktestRequest } from "../types.js";
 
 function handleError(res: Response, error: unknown): Response {
@@ -39,14 +40,25 @@ export async function runWalkForward(req: Request, res: Response): Promise<Respo
   }
 }
 
-export function getUniverse(req: Request, res: Response): Response {
-  const assetType = String(req.query.assetType ?? "STOCK").toUpperCase() as AssetType;
-  if (assetType !== "STOCK" && assetType !== "CRYPTO") {
-    return res.status(400).json({ error: "assetType must be STOCK or CRYPTO." });
+export async function getUniverse(req: Request, res: Response): Promise<Response> {
+  try {
+    const snapshot = await getUniverseSnapshot();
+    const rawType = req.query.assetType;
+    if (rawType == null || rawType === "") {
+      return res.json(snapshot);
+    }
+    const assetType = String(rawType).toUpperCase() as AssetType;
+    if (assetType !== "STOCK" && assetType !== "CRYPTO") {
+      return res.status(400).json({ error: "assetType must be STOCK or CRYPTO." });
+    }
+    const slice = sliceFor(snapshot, assetType);
+    return res.json({
+      assetType,
+      fetchedAt: snapshot.fetchedAt,
+      symbols: slice.symbols,
+      groups: slice.groups,
+    });
+  } catch (error) {
+    return handleError(res, error);
   }
-  return res.json({
-    assetType,
-    symbols: universeFor(assetType),
-    groups: assetType === "CRYPTO" ? CRYPTO_GROUPS : STOCK_GROUPS,
-  });
 }

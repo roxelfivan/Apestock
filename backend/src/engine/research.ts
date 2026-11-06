@@ -9,7 +9,7 @@ import type {
   WalkForwardFold,
   WalkForwardResult,
 } from "../types.js";
-import { buildResult, parseBacktestRequest } from "./execute.js";
+import { authorizeParsedRequest, buildResult, parseBacktestRequest } from "./execute.js";
 
 const SWEEP_WARNING =
   "Grid search overfits. Treat the best cell as a hypothesis, not a proven edge. Prefer walk-forward before acting on a parameter set.";
@@ -82,7 +82,7 @@ function toCell(result: ReturnType<typeof buildResult>): SweepCell {
 }
 
 export async function executeSweep(body: BacktestRequest): Promise<SweepResult> {
-  const parsed = parseBacktestRequest(body);
+  const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
   const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
   const grid = uniqueParams(defaultGrid(parsed.strategy));
   const results = grid.map((params) =>
@@ -98,7 +98,7 @@ export async function executeSweep(body: BacktestRequest): Promise<SweepResult> 
 
 export async function executeWalkForward(body: BacktestRequest): Promise<WalkForwardResult> {
   const folds = Math.min(5, Math.max(2, Number(body.folds ?? 3)));
-  const parsed = parseBacktestRequest(body);
+  const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
   const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
   const startIndex = Math.max(0, bars.findIndex((bar) => bar.date >= parsed.startDate));
   const testBars = bars.slice(startIndex);

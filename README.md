@@ -9,8 +9,9 @@ Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; th
 
 ## Universe
 
-- US stocks: top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM
-- Crypto: top 50 by market cap (Yahoo `-USD` pairs)
+- US stocks: live top 50 S&P 500 by market cap, top 50 Nasdaq by market cap, and top 50 US ETFs by AUM
+- Crypto: live top 50 by market cap (Yahoo `-USD` pairs)
+- Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours
 - Optional open Yahoo symbol (`allowAnySymbol`)
 
 ## Strategies

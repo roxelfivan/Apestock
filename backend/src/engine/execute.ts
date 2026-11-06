@@ -1,5 +1,6 @@
 import { isValidTicker } from "../data/universe.js";
 import { ValidationError } from "../errors.js";
+import { getUniverseSnapshot } from "../services/universeService.js";
 import { countMissingSessions, isIsoDate, isTimeframe, timeframeToRange, addUtcDays } from "../lib/dates.js";
 import { round } from "../lib/math.js";
 import { fetchHistoricalData } from "../services/dataService.js";
@@ -86,10 +87,6 @@ export function parseBacktestRequest(body: BacktestRequest): ParsedRequest {
   if (![commissionBps, commissionPerShare, slippageBps].every((value) => Number.isFinite(value) && value >= 0)) {
     throw new ValidationError("commission and slippage must be non-negative numbers.");
   }
-  if (!allowAnySymbol && !isValidTicker(ticker, assetType)) {
-    throw new ValidationError(`${ticker} is not in the ${assetType} universe. Enable allowAnySymbol to override.`);
-  }
-
   let startDate: string;
   let endDate: string;
   if (timeframe === "CUSTOM") {
@@ -140,8 +137,19 @@ export function fillModelLabel(parsed: ParsedRequest): string {
   return `long only · ${sizing} · T+1 open · ${parsed.commissionBps}bps + $${parsed.commissionPerShare}/sh · ${parsed.slippageBps}bps slip`;
 }
 
+export async function authorizeParsedRequest(parsed: ParsedRequest): Promise<ParsedRequest> {
+  if (parsed.allowAnySymbol) return parsed;
+  const snapshot = await getUniverseSnapshot();
+  if (!isValidTicker(parsed.ticker, parsed.assetType, snapshot)) {
+    throw new ValidationError(
+      `${parsed.ticker} is not in the ${parsed.assetType} universe. Enable allowAnySymbol to override.`,
+    );
+  }
+  return parsed;
+}
+
 export async function executeBacktest(body: BacktestRequest): Promise<BacktestResult> {
-  const parsed = parseBacktestRequest(body);
+  const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
   const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
   return buildResult(parsed, bars);
 }
