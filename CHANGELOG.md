@@ -12,17 +12,25 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
-### Fixed
+## [0.0.2] - 2026-11-06
 
-- Sweep and walk-forward errors no longer dump Yahoo HTML timeout pages into the UI
+Daily-bar persistence, live ETF split, extra strategies, and Yahoo last-bar cleanup.
 
 ### Added
 
 - Stochastic, time-series momentum, and Williams %R strategies
-- Gorilla app icon (favicon, Apple touch icon, PWA icons) and header brand mark
-- Header badge showing the frontend package version
-- Live top-50 S&P, Nasdaq, US ETF, and crypto lists for the asset selector
-  (6-hour server cache, last-good snapshot in `localStorage`)
+- Persist daily OHLC per symbol and refresh only through the latest completed
+  session (`POST /api/prices/sync` on app open)
+- Split US ETFs into top 50 stock, top 50 bond, and top 50 other (non-stock /
+  non-bond) lists
+
+### Fixed
+
+- Sweep and walk-forward errors no longer dump Yahoo HTML timeout pages into the UI
+- Price writes on Vercel/Lambda go to `/tmp` plus memory so `/var/task` ENOENT
+  does not fail a backtest
+- Drop Yahoo daily bars whose close is still `null` (or already cached as `0`)
+  so the last plotted price cannot crash to zero
 
 ## [0.0.1] - 2026-11-06
 
@@ -60,5 +68,6 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.2
 [0.0.1]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.1
