@@ -96,7 +96,7 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className={`mt-1.5 text-lg font-semibold ${toneClass}`}>{value}</p>
+      <p className={`mt-1.5 text-lg font-semibold break-words ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -270,17 +270,17 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
   const { totalReturn, maxDrawdown, winRate, totalTrades, metrics } = result;
 
   return (
-    <section className={`space-y-4 ${loading || stale ? "opacity-60" : ""}`}>
+    <section className={`min-w-0 space-y-4 ${loading || stale ? "opacity-60" : ""}`}>
       {stale || loading ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           {loading ? "Updating… previous result stays visible until the new run finishes." : "Inputs changed. This result is stale until you run again."}
         </div>
       ) : null}
       {result.ticker ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Last run</p>
-            <p className="text-sm text-white">
+            <p className="text-sm break-words text-white">
               {result.ticker} · {result.strategy ? STRATEGY_LABELS[result.strategy] : "strategy"} · {result.timeframe} ·{" "}
               {result.testStartDate ?? result.startDate} → {result.endDate}
             </p>
@@ -333,7 +333,7 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Equity</p>
@@ -372,12 +372,13 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
         </div>
         <div
           ref={chartRef}
-          className="h-[360px] w-full touch-none"
+          className="relative h-[360px] w-full min-w-0 overflow-hidden touch-none"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
         >
+          <div className="absolute inset-0 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={visible} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
@@ -495,6 +496,7 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
               />
             </ComposedChart>
           </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </section>

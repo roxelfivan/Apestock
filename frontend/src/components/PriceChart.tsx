@@ -1,6 +1,7 @@
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMoney, formatNumber } from "../lib/format";
 import type { BacktestResult } from "../types";
+import ChartViewport from "./ChartViewport";
 
 interface PriceChartProps {
   result: BacktestResult;
@@ -32,10 +33,10 @@ export default function PriceChart({ result }: PriceChartProps) {
   const hasMacd = data.some((row) => row.macd != null);
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Price</p>
       <h3 className="text-sm font-semibold text-white">Close with indicators and fills</h3>
-      <div className="mt-3 h-[260px] w-full">
+      <ChartViewport height={260} className="mt-3">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
             <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
@@ -88,9 +89,9 @@ export default function PriceChart({ result }: PriceChartProps) {
             />
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
+      </ChartViewport>
       {hasRsi || hasMacd ? (
-        <div className="mt-3 h-[120px] w-full">
+        <ChartViewport height={120} className="mt-3">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
@@ -102,7 +103,7 @@ export default function PriceChart({ result }: PriceChartProps) {
               ) : null}
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
+        </ChartViewport>
       ) : null}
     </div>
   );

@@ -12,15 +12,15 @@ export default function TradeTable({ result }: { result: BacktestResult }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Blotter</p>
           <h3 className="text-sm font-semibold text-white">Closed trades</h3>
         </div>
-        <p className="text-[10px] text-slate-500">EOD marks the last close, not a T+1 signal fill</p>
+        <p className="max-w-full text-[10px] text-slate-500">EOD marks the last close, not a T+1 signal fill</p>
       </div>
-      <div className="max-h-72 overflow-auto">
+      <div className="max-h-72 overflow-x-auto overflow-y-auto">
         <table className="min-w-full text-left text-xs text-slate-300">
           <thead className="sticky top-0 bg-slate-900 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>

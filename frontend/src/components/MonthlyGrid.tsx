@@ -5,7 +5,7 @@ export default function MonthlyGrid({ result }: { result: BacktestResult }) {
   const rows = result.metrics?.monthlyReturns ?? [];
   if (rows.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Calendar</p>
       <h3 className="text-sm font-semibold text-white">Monthly returns</h3>
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">

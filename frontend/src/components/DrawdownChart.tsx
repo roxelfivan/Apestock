@@ -1,15 +1,16 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatPct } from "../lib/format";
 import type { BacktestResult } from "../types";
+import ChartViewport from "./ChartViewport";
 
 export default function DrawdownChart({ result }: { result: BacktestResult }) {
   const data = result.drawdownCurve ?? [];
   if (data.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Risk</p>
       <h3 className="text-sm font-semibold text-white">Underwater drawdown</h3>
-      <div className="mt-3 h-[160px] w-full">
+      <ChartViewport height={160} className="mt-3">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
@@ -29,7 +30,7 @@ export default function DrawdownChart({ result }: { result: BacktestResult }) {
             <Area type="monotone" dataKey="drawdown" stroke="#f43f5e" fill="#881337" fillOpacity={0.35} isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </ChartViewport>
     </div>
   );
 }

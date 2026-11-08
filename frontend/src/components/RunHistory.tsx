@@ -12,7 +12,7 @@ interface RunHistoryProps {
 export default function RunHistory({ runs, compareId, onCompare, onRestore }: RunHistoryProps) {
   if (runs.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Local history</p>
       <h3 className="text-sm font-semibold text-white">Saved on this browser</h3>
       <ul className="mt-3 space-y-2">

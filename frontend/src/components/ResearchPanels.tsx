@@ -24,7 +24,7 @@ export default function ResearchPanels({
   onWalkForward,
 }: ResearchPanelsProps) {
   return (
-    <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+    <div className="min-w-0 space-y-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Research</p>
         <h2 className="mt-1 text-lg font-semibold text-white">Sweep and walk-forward</h2>
@@ -88,7 +88,7 @@ export default function ResearchPanels({
           <p className="text-xs text-amber-300">{walkForward.warning}</p>
           <ul className="mt-2 space-y-1 text-[11px] text-slate-300">
             {walkForward.folds.map((fold) => (
-              <li key={fold.fold}>
+              <li key={fold.fold} className="break-words">
                 Fold {fold.fold}: IS Sharpe {fold.inSampleSharpe.toFixed(2)} → OOS {formatPct(fold.outOfSampleReturn)} /
                 Sharpe {fold.outOfSampleSharpe.toFixed(2)} ({fold.startDate}–{fold.endDate})
               </li>

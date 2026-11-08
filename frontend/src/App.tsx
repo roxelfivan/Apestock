@@ -251,8 +251,8 @@ export default function App() {
   const compare = runs.find((run) => run.id === compareId)?.result ?? null;
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950">
+      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-start gap-4">
             <img
@@ -281,8 +281,8 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <div className="space-y-4">
+        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-4">
             <AssetSelector
               assetType={assetType}
               ticker={ticker}
@@ -370,7 +370,7 @@ export default function App() {
               </div>
             ) : null}
           </div>
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <MetricsDashboard result={result} compare={compare} loading={loading} stale={stale} />
             {result ? <PriceChart result={result} /> : null}
             {result ? <DrawdownChart result={result} /> : null}
