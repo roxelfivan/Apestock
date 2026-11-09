@@ -1,18 +1,7 @@
-import { DEFAULT_PARAMS } from "./defaults";
+import { ALL_STRATEGIES, DEFAULT_PARAMS } from "./defaults";
 import type { AssetType, BacktestConfig, SizingMode, StrategyName, Timeframe } from "../types";
 
-const STRATEGIES = new Set<StrategyName>([
-  "MA_CROSSOVER",
-  "EMA_CROSSOVER",
-  "RSI",
-  "MACD",
-  "BOLLINGER",
-  "DONCHIAN",
-  "STOCHASTIC",
-  "MOMENTUM",
-  "WILLIAMS_R",
-  "BUY_HOLD",
-]);
+const STRATEGIES = new Set<StrategyName>(ALL_STRATEGIES);
 
 function num(value: string | null, fallback: number): number {
   if (value == null || value === "") return fallback;
@@ -32,20 +21,27 @@ export function configFromSearch(search: string): Partial<BacktestConfig> {
     next.strategy = strategy;
     next.params = { ...DEFAULT_PARAMS[strategy] };
   }
-  if (q.get("shortPeriod")) next.params = { ...next.params, shortPeriod: num(q.get("shortPeriod"), 50) };
-  if (q.get("longPeriod")) next.params = { ...next.params, longPeriod: num(q.get("longPeriod"), 200) };
-  if (q.get("rsiPeriod")) next.params = { ...next.params, rsiPeriod: num(q.get("rsiPeriod"), 14) };
-  if (q.get("oversold")) next.params = { ...next.params, oversold: num(q.get("oversold"), 30) };
-  if (q.get("overbought")) next.params = { ...next.params, overbought: num(q.get("overbought"), 70) };
-  if (q.get("fastPeriod")) next.params = { ...next.params, fastPeriod: num(q.get("fastPeriod"), 12) };
-  if (q.get("slowPeriod")) next.params = { ...next.params, slowPeriod: num(q.get("slowPeriod"), 26) };
-  if (q.get("signalPeriod")) next.params = { ...next.params, signalPeriod: num(q.get("signalPeriod"), 9) };
-  if (q.get("bbPeriod")) next.params = { ...next.params, bbPeriod: num(q.get("bbPeriod"), 20) };
-  if (q.get("bbStdDev")) next.params = { ...next.params, bbStdDev: num(q.get("bbStdDev"), 2) };
-  if (q.get("donchianPeriod")) next.params = { ...next.params, donchianPeriod: num(q.get("donchianPeriod"), 20) };
-  if (q.get("kPeriod")) next.params = { ...next.params, kPeriod: num(q.get("kPeriod"), 14) };
-  if (q.get("lookback")) next.params = { ...next.params, lookback: num(q.get("lookback"), 20) };
-  if (q.get("wrPeriod")) next.params = { ...next.params, wrPeriod: num(q.get("wrPeriod"), 14) };
+  const reserved = new Set([
+    "ticker",
+    "assetType",
+    "strategy",
+    "capital",
+    "tradePercent",
+    "timeframe",
+    "startDate",
+    "endDate",
+    "commissionBps",
+    "commissionPerShare",
+    "slippageBps",
+    "sizingMode",
+    "allowAny",
+  ]);
+  if (next.strategy) {
+    for (const [key, value] of q.entries()) {
+      if (reserved.has(key) || value === "") continue;
+      next.params = { ...next.params, [key]: num(value, 0) };
+    }
+  }
   if (q.get("capital")) next.startingCapital = num(q.get("capital"), 10_000);
   if (q.get("tradePercent")) next.tradePercent = num(q.get("tradePercent"), 20);
   if (["1Y", "3Y", "5Y", "CUSTOM"].includes(q.get("timeframe") ?? "")) {

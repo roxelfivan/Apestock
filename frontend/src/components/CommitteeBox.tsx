@@ -78,7 +78,7 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
         </div>
       </div>
 
-      <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((member) => (
           <article
             key={member.strategy}

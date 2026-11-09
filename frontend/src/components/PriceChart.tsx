@@ -18,6 +18,7 @@ export default function PriceChart({ result }: PriceChartProps) {
       close: bar.close,
       shortMa: bar.indicators.shortMa,
       longMa: bar.indicators.longMa,
+      hma: bar.indicators.hma,
       rsi: bar.indicators.rsi,
       macd: bar.indicators.macd,
       signal: bar.indicators.signal,
@@ -25,12 +26,39 @@ export default function PriceChart({ result }: PriceChartProps) {
       bbLower: bar.indicators.bbLower,
       donchianHigh: bar.indicators.donchianHigh,
       donchianLow: bar.indicators.donchianLow,
+      supertrend: bar.indicators.supertrend,
+      psar: bar.indicators.psar,
+      tenkan: bar.indicators.tenkan,
+      kijun: bar.indicators.kijun,
+      keltnerUpper: bar.indicators.keltnerUpper,
+      keltnerLower: bar.indicators.keltnerLower,
+      cci: bar.indicators.cci,
+      adx: bar.indicators.adx,
+      trix: bar.indicators.trix,
+      uo: bar.indicators.uo,
+      stochRsi: bar.indicators.stochRsi,
+      roc: bar.indicators.roc,
+      ppo: bar.indicators.ppo,
+      ao: bar.indicators.ao,
       buyMark: dayEvents.some((event) => event.side === "BUY") ? bar.close : null,
       sellMark: dayEvents.some((event) => event.side === "SELL") ? bar.close : null,
     };
   });
-  const hasRsi = data.some((row) => row.rsi != null);
   const hasMacd = data.some((row) => row.macd != null);
+  const oscKey = (
+    [
+      "rsi",
+      "macd",
+      "stochRsi",
+      "cci",
+      "adx",
+      "trix",
+      "uo",
+      "roc",
+      "ppo",
+      "ao",
+    ] as const
+  ).find((key) => data.some((row) => row[key] != null));
 
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -65,8 +93,15 @@ export default function PriceChart({ result }: PriceChartProps) {
             <Line yAxisId="price" type="monotone" dataKey="close" stroke="#e2e8f0" strokeWidth={2} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="shortMa" stroke="#34d399" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="longMa" stroke="#60a5fa" strokeWidth={1} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="hma" stroke="#22d3ee" strokeWidth={1} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="supertrend" stroke="#fb7185" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="psar" stroke="#fbbf24" strokeWidth={0} dot={{ r: 1.5, fill: "#fbbf24" }} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="tenkan" stroke="#34d399" strokeWidth={1} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="kijun" stroke="#60a5fa" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="bbUpper" stroke="#a78bfa" strokeDasharray="3 3" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="bbLower" stroke="#a78bfa" strokeDasharray="3 3" strokeWidth={1} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="keltnerUpper" stroke="#c4b5fd" strokeDasharray="2 4" strokeWidth={1} dot={false} isAnimationActive={false} />
+            <Line yAxisId="price" type="monotone" dataKey="keltnerLower" stroke="#c4b5fd" strokeDasharray="2 4" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="donchianHigh" stroke="#fbbf24" strokeDasharray="4 4" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line yAxisId="price" type="monotone" dataKey="donchianLow" stroke="#fbbf24" strokeDasharray="4 4" strokeWidth={1} dot={false} isAnimationActive={false} />
             <Line
@@ -90,15 +125,15 @@ export default function PriceChart({ result }: PriceChartProps) {
           </ComposedChart>
         </ResponsiveContainer>
       </ChartViewport>
-      {hasRsi || hasMacd ? (
+      {oscKey ? (
         <ChartViewport height={120} className="mt-3">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
               <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 9 }} minTickGap={40} tickLine={false} />
               <YAxis tick={{ fill: "#94a3b8", fontSize: 9 }} width={44} />
-              <Line type="monotone" dataKey={hasRsi ? "rsi" : "macd"} stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-              {hasMacd ? (
+              <Line type="monotone" dataKey={oscKey} stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              {hasMacd || oscKey === "ppo" || oscKey === "trix" || oscKey === "roc" ? (
                 <Line type="monotone" dataKey="signal" stroke="#94a3b8" strokeWidth={1} dot={false} isAnimationActive={false} />
               ) : null}
             </ComposedChart>

@@ -16,22 +16,12 @@ import type {
   Timeframe,
 } from "../types.js";
 import { computeCommittee, committeeFetchWarmup } from "./committee.js";
+import { ALL_STRATEGIES } from "./defaults.js";
 import { runEngine, type EngineConfig } from "./engine.js";
 import { computeRiskMetrics, drawdownCurve, maxDrawdownPct } from "./metrics.js";
 import { computeSignals, warmupBars } from "./signals.js";
 
-export const STRATEGIES = new Set<StrategyName>([
-  "MA_CROSSOVER",
-  "EMA_CROSSOVER",
-  "RSI",
-  "MACD",
-  "BOLLINGER",
-  "DONCHIAN",
-  "STOCHASTIC",
-  "MOMENTUM",
-  "WILLIAMS_R",
-  "BUY_HOLD",
-]);
+export const STRATEGIES = new Set<StrategyName>(ALL_STRATEGIES);
 export const ASSET_TYPES = new Set<AssetType>(["STOCK", "CRYPTO"]);
 export const SIZING_MODES = new Set<SizingMode>(["fixed_from_start", "percent_of_equity"]);
 
@@ -73,7 +63,7 @@ export function parseBacktestRequest(body: BacktestRequest): ParsedRequest {
   if (!ASSET_TYPES.has(assetType)) throw new ValidationError("assetType must be STOCK or CRYPTO.");
   if (!STRATEGIES.has(strategy)) {
     throw new ValidationError(
-      "strategy must be MA_CROSSOVER, EMA_CROSSOVER, RSI, MACD, BOLLINGER, DONCHIAN, STOCHASTIC, MOMENTUM, WILLIAMS_R, or BUY_HOLD.",
+      `strategy must be one of ${ALL_STRATEGIES.join(", ")}.`,
     );
   }
   if (!Number.isFinite(startingCapital) || startingCapital <= 0) {

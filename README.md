@@ -23,17 +23,28 @@ Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}
 
 ## Strategies
 
-- **MA_CROSSOVER** / **EMA_CROSSOVER** — short MA crosses long MA
-- **RSI** — cross up through oversold; cross down through overbought
-- **MACD** — MACD line crosses the signal line
-- **BOLLINGER** — close reclaims the lower band; fades the upper band
-- **DONCHIAN** — close breaks the prior N-day high/low
-- **STOCHASTIC** — %K crosses up through oversold; down through overbought
+Trend
+- **MA_CROSSOVER** / **EMA_CROSSOVER** / **WMA_CROSSOVER** — short MA crosses long MA
+- **HMA** — close crosses the Hull moving average
+- **SUPERTREND** — ATR trailing stop flips long/short
+- **PSAR** — Parabolic SAR flips below (buy) or above (sell) price
+- **ICHIMOKU** — Tenkan crosses Kijun
+- **ADX** — +DI crosses −DI
+- **AROON** — Aroon Up crosses Aroon Down
+
+Oscillators
+- **RSI** / **STOCHASTIC** / **STOCH_RSI** / **WILLIAMS_R** / **CCI** / **ULTIMATE** — leave oversold (buy) or overbought (sell)
+- **MACD** / **PPO** / **TRIX** / **ROC** — line crosses its signal
+- **AWESOME** — median-price oscillator crosses zero
 - **MOMENTUM** — N-day return flips from negative to positive (buy) or the reverse (sell)
-- **WILLIAMS_R** — %R crosses up through oversold (e.g. -80); down through overbought (e.g. -20)
+
+Channels
+- **BOLLINGER** / **KELTNER** — close reclaims the lower band; fades the upper band
+- **DONCHIAN** — close breaks the prior N-day high/low
+
 - **BUY_HOLD** — one full-capital buy on the first fill
 
-After a run, the UI shows an **indicator committee**: the nine technical rules above (not buy-and-hold) vote from their last buy/sell. Keep means the rule has not flipped, or never fired. Majority is an unweighted count; Sharpe-weighted ignores keep and weights the rest by `max(Sharpe, 0.1)`.
+After a run, the UI shows an **indicator committee**: every technical rule above (not buy-and-hold) votes from its last buy/sell. Keep means the rule has not flipped, or never fired. Majority is an unweighted count; Sharpe-weighted ignores keep and weights the rest by `max(Sharpe, 0.1)`.
 
 Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.
 

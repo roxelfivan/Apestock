@@ -17,6 +17,9 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 - Indicator committee on each backtest: every technical rule votes buy, sell,
   or keep from its last signal, with the same-window return, Sharpe, win rate,
   and trade count next to the vote
+- 15 more technical strategies (25 logics total): WMA, Hull MA, Stochastic RSI,
+  PPO, TRIX, CCI, Ultimate oscillator, Awesome oscillator, ROC, ADX/DMI, Aroon,
+  Supertrend, Parabolic SAR, Ichimoku TK cross, and Keltner channels
 
 ## [0.0.2] - 2026-11-06
 

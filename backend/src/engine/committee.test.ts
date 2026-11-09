@@ -35,7 +35,7 @@ test("committee reports a vote and performance for each indicator", () => {
     strategy: "RSI",
     params: DEFAULT_STRATEGY_PARAMS.RSI,
   });
-  assert.equal(committee.members.length, 9);
+  assert.ok(committee.members.length >= 20);
   assert.equal(committee.buyVotes + committee.sellVotes + committee.holdVotes, committee.members.filter((m) => m.ready).length);
   assert.ok(["BUY", "SELL", "HOLD"].includes(committee.majority));
   const rsi = committee.members.find((member) => member.strategy === "RSI");

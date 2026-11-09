@@ -272,8 +272,8 @@ export default function App() {
               </p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Live top-50 S&P, Nasdaq, stock/bond/other ETF, and crypto universes, or any Yahoo symbol. Daily bars, several rule-based
-                strategies, optional costs, and inspectable trades. Signals on the close; fills at the next open.
+                Live top-50 S&P, Nasdaq, stock/bond/other ETF, and crypto universes, or any Yahoo symbol. Daily bars, 24
+                technical rules plus buy-and-hold, optional costs, and inspectable trades. Signals on the close; fills at the next open.
               </p>
             </div>
           </div>

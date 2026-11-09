@@ -2,13 +2,28 @@ export type AssetType = "STOCK" | "CRYPTO";
 export type StrategyName =
   | "MA_CROSSOVER"
   | "EMA_CROSSOVER"
+  | "WMA_CROSSOVER"
+  | "HMA"
   | "RSI"
-  | "MACD"
-  | "BOLLINGER"
-  | "DONCHIAN"
   | "STOCHASTIC"
-  | "MOMENTUM"
+  | "STOCH_RSI"
+  | "MACD"
+  | "PPO"
+  | "TRIX"
+  | "CCI"
   | "WILLIAMS_R"
+  | "ULTIMATE"
+  | "AWESOME"
+  | "MOMENTUM"
+  | "ROC"
+  | "ADX"
+  | "AROON"
+  | "SUPERTREND"
+  | "PSAR"
+  | "ICHIMOKU"
+  | "BOLLINGER"
+  | "KELTNER"
+  | "DONCHIAN"
   | "BUY_HOLD";
 export type Signal = "BUY" | "SELL" | "HOLD";
 export type CommitteeVote = Signal;
@@ -31,6 +46,27 @@ export interface StrategyParams {
   kPeriod?: number;
   lookback?: number;
   wrPeriod?: number;
+  cciPeriod?: number;
+  adxPeriod?: number;
+  atrPeriod?: number;
+  atrMultiplier?: number;
+  psarStep?: number;
+  psarMax?: number;
+  tenkanPeriod?: number;
+  kijunPeriod?: number;
+  aroonPeriod?: number;
+  rocPeriod?: number;
+  rocSignalPeriod?: number;
+  stochRsiPeriod?: number;
+  keltnerPeriod?: number;
+  trixPeriod?: number;
+  trixSignalPeriod?: number;
+  uoShort?: number;
+  uoMid?: number;
+  uoLong?: number;
+  hmaPeriod?: number;
+  aoFast?: number;
+  aoSlow?: number;
 }
 
 export interface EquityPoint {

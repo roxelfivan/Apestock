@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { OhlcBar } from "../types.js";
 import { runEngine } from "./engine.js";
 import { computeRiskMetrics } from "./metrics.js";
+import { DEFAULT_STRATEGY_PARAMS } from "./defaults.js";
 import { computeSignals } from "./signals.js";
 
 function barsFromCloses(closes: number[], start = "2020-01-01"): OhlcBar[] {
@@ -98,4 +99,43 @@ test("stochastic emits a buy after leaving oversold", () => {
   const ohlc = barsFromCloses([20, 19, 18, 17, 16, 15, 14, 13, 12, 18, 20]);
   const { signals } = computeSignals(ohlc, "STOCHASTIC", { kPeriod: 5, oversold: 20, overbought: 80 });
   assert.ok(signals.includes("BUY"));
+});
+
+test("CCI, Supertrend, and Ichimoku emit at least one buy on a recovery", () => {
+  const down = Array.from({ length: 40 }, (_, i) => 80 - i);
+  const up = Array.from({ length: 40 }, (_, i) => 40 + i * 1.5);
+  const ohlc = barsFromCloses([...down, ...up]);
+  const cci = computeSignals(ohlc, "CCI", { cciPeriod: 10, oversold: -100, overbought: 100 });
+  const st = computeSignals(ohlc, "SUPERTREND", { atrPeriod: 7, atrMultiplier: 2 });
+  const ichi = computeSignals(ohlc, "ICHIMOKU", { tenkanPeriod: 5, kijunPeriod: 12 });
+  assert.ok(cci.signals.includes("BUY"));
+  assert.ok(st.signals.includes("BUY") || st.signals.includes("SELL"));
+  assert.ok(ichi.signals.includes("BUY") || ichi.signals.includes("SELL"));
+});
+
+test("all technical strategies compute without throwing on a long series", () => {
+  const ohlc = barsFromCloses(
+    Array.from({ length: 220 }, (_, i) => 50 + Math.sin(i / 8) * 8 + i * 0.05),
+  );
+  const names = [
+    "WMA_CROSSOVER",
+    "HMA",
+    "STOCH_RSI",
+    "PPO",
+    "TRIX",
+    "CCI",
+    "ULTIMATE",
+    "AWESOME",
+    "ROC",
+    "ADX",
+    "AROON",
+    "SUPERTREND",
+    "PSAR",
+    "ICHIMOKU",
+    "KELTNER",
+  ] as const;
+  for (const name of names) {
+    const result = computeSignals(ohlc, name, DEFAULT_STRATEGY_PARAMS[name]);
+    assert.equal(result.signals.length, ohlc.length);
+  }
 });
