@@ -33,6 +33,8 @@ Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}
 - **WILLIAMS_R** — %R crosses up through oversold (e.g. -80); down through overbought (e.g. -20)
 - **BUY_HOLD** — one full-capital buy on the first fill
 
+After a run, the UI shows an **indicator committee**: the nine technical rules above (not buy-and-hold) vote from their last buy/sell. Keep means the rule has not flipped, or never fired. Majority is an unweighted count; Sharpe-weighted ignores keep and weights the rest by `max(Sharpe, 0.1)`.
+
 Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.
 
 ## Run locally
@@ -96,7 +98,7 @@ The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the E
 
 Timeframe is `1Y`, `3Y`, `5Y`, or `CUSTOM` (requires `startDate` and `endDate` as `YYYY-MM-DD`).
 
-The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, and risk metrics (`version: 2`).
+The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, risk metrics, and an indicator committee (`version: 3`). The committee runs every technical strategy on the same window. Each member votes **buy**, **sell**, or **keep** from its last actionable signal, and reports how that rule performed.
 
 Also:
 

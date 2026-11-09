@@ -103,7 +103,7 @@ export async function executeSweep(body: BacktestRequest): Promise<SweepResult> 
   const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
   const grid = uniqueParams(defaultGrid(parsed.strategy));
   const results = grid.map((params) =>
-    toCell(buildResult({ ...parsed, params }, bars)),
+    toCell(buildResult({ ...parsed, params }, bars, { committee: false })),
   );
   return {
     ticker: parsed.ticker,
@@ -140,6 +140,7 @@ export async function executeWalkForward(body: BacktestRequest): Promise<WalkFor
       const isResult = buildResult(
         { ...parsed, params, startDate: parsed.startDate, endDate: isEndDate, timeframe: "CUSTOM" },
         bars.slice(0, isEnd),
+        { committee: false },
       );
       if (isResult.metrics.sharpe > bestSharpe) {
         bestSharpe = isResult.metrics.sharpe;
@@ -149,6 +150,7 @@ export async function executeWalkForward(body: BacktestRequest): Promise<WalkFor
     const oos = buildResult(
       { ...parsed, params: bestParams, startDate: oosStartDate, endDate: oosEndDate, timeframe: "CUSTOM" },
       bars.slice(0, oosEnd),
+      { committee: false },
     );
     oosCurves.push(oos);
     foldSummaries.push({

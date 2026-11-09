@@ -15,6 +15,7 @@ import type {
   StrategyParams,
   Timeframe,
 } from "../types.js";
+import { computeCommittee, committeeFetchWarmup } from "./committee.js";
 import { runEngine, type EngineConfig } from "./engine.js";
 import { computeRiskMetrics, drawdownCurve, maxDrawdownPct } from "./metrics.js";
 import { computeSignals, warmupBars } from "./signals.js";
@@ -34,7 +35,7 @@ export const STRATEGIES = new Set<StrategyName>([
 export const ASSET_TYPES = new Set<AssetType>(["STOCK", "CRYPTO"]);
 export const SIZING_MODES = new Set<SizingMode>(["fixed_from_start", "percent_of_equity"]);
 
-export const RESULT_VERSION = 2;
+export const RESULT_VERSION = 3;
 
 export interface ParsedRequest {
   ticker: string;
@@ -102,7 +103,7 @@ export function parseBacktestRequest(body: BacktestRequest): ParsedRequest {
     ({ startDate, endDate } = timeframeToRange(timeframe));
   }
 
-  const warmup = Math.ceil(warmupBars(strategy, params) * 2.5) + 14;
+  const warmup = Math.max(Math.ceil(warmupBars(strategy, params) * 2.5) + 14, committeeFetchWarmup());
   const fetchStart = addUtcDays(startDate, -warmup);
 
   return {
@@ -157,7 +158,11 @@ export async function executeBacktest(body: BacktestRequest): Promise<BacktestRe
   return buildResult(parsed, bars);
 }
 
-export function buildResult(parsed: ParsedRequest, bars: OhlcBar[]): BacktestResult {
+export function buildResult(
+  parsed: ParsedRequest,
+  bars: OhlcBar[],
+  options: { committee?: boolean } = {},
+): BacktestResult {
   const { signals, minBars, series } = computeSignals(bars, parsed.strategy, parsed.params);
   if (bars.length < minBars) {
     throw new ValidationError(
@@ -214,5 +219,20 @@ export function buildResult(parsed: ParsedRequest, bars: OhlcBar[]): BacktestRes
     bars: indicatorBars,
     metrics: computeRiskMetrics(parsed.startingCapital, engine.equityCurve, engine.trades),
     drawdownCurve: drawdownCurve(engine.equityCurve),
+    committee:
+      options.committee === false
+        ? {
+            asOf: bars.at(-1)?.date ?? null,
+            majority: "HOLD",
+            weighted: "HOLD",
+            buyVotes: 0,
+            sellVotes: 0,
+            holdVotes: 0,
+            members: [],
+          }
+        : computeCommittee(bars, startIndex, engineConfigFrom(parsed), {
+            strategy: parsed.strategy,
+            params: parsed.params,
+          }),
   };
 }

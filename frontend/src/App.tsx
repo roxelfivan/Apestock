@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import packageJson from "../package.json";
 import AssetSelector from "./components/AssetSelector";
+import CommitteeBox from "./components/CommitteeBox";
 import DrawdownChart from "./components/DrawdownChart";
 import MetricsDashboard from "./components/MetricsDashboard";
 import MonthlyGrid from "./components/MonthlyGrid";
@@ -372,6 +373,11 @@ export default function App() {
           </div>
           <div className="min-w-0 space-y-4">
             <MetricsDashboard result={result} compare={compare} loading={loading} stale={stale} />
+            {result?.committee?.members.length ? (
+              <div className={loading || stale ? "opacity-60" : ""}>
+                <CommitteeBox committee={result.committee} />
+              </div>
+            ) : null}
             {result ? <PriceChart result={result} /> : null}
             {result ? <DrawdownChart result={result} /> : null}
             {result ? <MonthlyGrid result={result} /> : null}
