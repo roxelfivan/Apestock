@@ -84,6 +84,97 @@ export function defaultGrid(strategy: StrategyName): StrategyParams[] {
       { wrPeriod: 21, oversold: -80, overbought: -20 },
     ];
   }
+  if (strategy === "WMA_CROSSOVER") {
+    return [
+      { shortPeriod: 10, longPeriod: 30 },
+      { shortPeriod: 20, longPeriod: 50 },
+      { shortPeriod: 10, longPeriod: 50 },
+    ];
+  }
+  if (strategy === "HMA") {
+    return [{ hmaPeriod: 9 }, { hmaPeriod: 16 }, { hmaPeriod: 21 }];
+  }
+  if (strategy === "STOCH_RSI") {
+    return [
+      { stochRsiPeriod: 14, oversold: 20, overbought: 80 },
+      { stochRsiPeriod: 14, oversold: 30, overbought: 70 },
+      { stochRsiPeriod: 21, oversold: 20, overbought: 80 },
+    ];
+  }
+  if (strategy === "PPO") {
+    return [
+      { fastPeriod: 8, slowPeriod: 17, signalPeriod: 9 },
+      { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+      { fastPeriod: 19, slowPeriod: 39, signalPeriod: 9 },
+    ];
+  }
+  if (strategy === "TRIX") {
+    return [
+      { trixPeriod: 9, trixSignalPeriod: 9 },
+      { trixPeriod: 15, trixSignalPeriod: 9 },
+      { trixPeriod: 21, trixSignalPeriod: 9 },
+    ];
+  }
+  if (strategy === "CCI") {
+    return [
+      { cciPeriod: 14, oversold: -100, overbought: 100 },
+      { cciPeriod: 20, oversold: -100, overbought: 100 },
+      { cciPeriod: 20, oversold: -150, overbought: 150 },
+    ];
+  }
+  if (strategy === "ULTIMATE") {
+    return [
+      { uoShort: 7, uoMid: 14, uoLong: 28, oversold: 30, overbought: 70 },
+      { uoShort: 7, uoMid: 14, uoLong: 28, oversold: 25, overbought: 75 },
+    ];
+  }
+  if (strategy === "AWESOME") {
+    return [
+      { aoFast: 5, aoSlow: 34 },
+      { aoFast: 5, aoSlow: 21 },
+    ];
+  }
+  if (strategy === "ROC") {
+    return [
+      { rocPeriod: 10, rocSignalPeriod: 9 },
+      { rocPeriod: 12, rocSignalPeriod: 9 },
+      { rocPeriod: 20, rocSignalPeriod: 9 },
+    ];
+  }
+  if (strategy === "ADX") {
+    return [{ adxPeriod: 10 }, { adxPeriod: 14 }, { adxPeriod: 21 }];
+  }
+  if (strategy === "AROON") {
+    return [{ aroonPeriod: 14 }, { aroonPeriod: 25 }, { aroonPeriod: 50 }];
+  }
+  if (strategy === "SUPERTREND") {
+    return [
+      { atrPeriod: 7, atrMultiplier: 3 },
+      { atrPeriod: 10, atrMultiplier: 3 },
+      { atrPeriod: 10, atrMultiplier: 2 },
+    ];
+  }
+  if (strategy === "PSAR") {
+    return [
+      { psarStep: 0.02, psarMax: 0.2 },
+      { psarStep: 0.02, psarMax: 0.3 },
+      { psarStep: 0.01, psarMax: 0.2 },
+    ];
+  }
+  if (strategy === "ICHIMOKU") {
+    return [
+      { tenkanPeriod: 7, kijunPeriod: 22 },
+      { tenkanPeriod: 9, kijunPeriod: 26 },
+      { tenkanPeriod: 12, kijunPeriod: 30 },
+    ];
+  }
+  if (strategy === "KELTNER") {
+    return [
+      { keltnerPeriod: 20, atrPeriod: 10, atrMultiplier: 2 },
+      { keltnerPeriod: 20, atrPeriod: 10, atrMultiplier: 1.5 },
+      { keltnerPeriod: 50, atrPeriod: 10, atrMultiplier: 2 },
+    ];
+  }
   return [{}];
 }
 

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { STRATEGY_LABELS } from "../lib/defaults";
+import { STRATEGY_GROUPS, STRATEGY_LABELS } from "../lib/defaults";
 import type { SizingMode, StrategyName, StrategyParams, Timeframe } from "../types";
 
 interface StrategyFormProps {
@@ -81,14 +81,18 @@ export default function StrategyForm({
         onChange={(event) => onStrategyChange(event.target.value as StrategyName)}
         className={fieldClass}
       >
-        {(Object.keys(STRATEGY_LABELS) as StrategyName[]).map((name) => (
-          <option key={name} value={name}>
-            {STRATEGY_LABELS[name]}
-          </option>
+        {STRATEGY_GROUPS.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.strategies.map((name) => (
+              <option key={name} value={name}>
+                {STRATEGY_LABELS[name]}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 
-      {strategy === "MA_CROSSOVER" || strategy === "EMA_CROSSOVER" ? (
+      {strategy === "MA_CROSSOVER" || strategy === "EMA_CROSSOVER" || strategy === "WMA_CROSSOVER" ? (
         <div className="mt-4 grid grid-cols-2 gap-3">
           <NumberField
             id="shortPeriod"
@@ -275,6 +279,338 @@ export default function StrategyForm({
             value={params.overbought}
             className={fieldClass}
             onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "HMA" ? (
+        <div className="mt-4">
+          <NumberField
+            id="hmaPeriod"
+            label="Hull period"
+            min={2}
+            value={params.hmaPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ hmaPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "STOCH_RSI" ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="stochRsiPeriod"
+            label="RSI period"
+            min={2}
+            value={params.stochRsiPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ stochRsiPeriod: value })}
+          />
+          <NumberField
+            id="stochRsiOversold"
+            label="Oversold (buy)"
+            min={1}
+            max={49}
+            value={params.oversold}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ oversold: value })}
+          />
+          <NumberField
+            id="stochRsiOverbought"
+            label="Overbought (sell)"
+            min={51}
+            max={99}
+            value={params.overbought}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "PPO" ? (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <NumberField
+            id="ppoFast"
+            label="Fast"
+            min={2}
+            value={params.fastPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ fastPeriod: value })}
+          />
+          <NumberField
+            id="ppoSlow"
+            label="Slow"
+            min={3}
+            value={params.slowPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ slowPeriod: value })}
+          />
+          <NumberField
+            id="ppoSignal"
+            label="Signal"
+            min={1}
+            value={params.signalPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ signalPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "TRIX" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="trixPeriod"
+            label="TRIX period"
+            min={2}
+            value={params.trixPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ trixPeriod: value })}
+          />
+          <NumberField
+            id="trixSignalPeriod"
+            label="Signal"
+            min={1}
+            value={params.trixSignalPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ trixSignalPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "CCI" ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="cciPeriod"
+            label="CCI period"
+            min={2}
+            value={params.cciPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ cciPeriod: value })}
+          />
+          <NumberField
+            id="cciOversold"
+            label="Oversold (buy)"
+            value={params.oversold}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ oversold: value })}
+          />
+          <NumberField
+            id="cciOverbought"
+            label="Overbought (sell)"
+            value={params.overbought}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "ULTIMATE" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="uoShort"
+            label="Short"
+            min={2}
+            value={params.uoShort}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ uoShort: value })}
+          />
+          <NumberField
+            id="uoMid"
+            label="Mid"
+            min={3}
+            value={params.uoMid}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ uoMid: value })}
+          />
+          <NumberField
+            id="uoLong"
+            label="Long"
+            min={4}
+            value={params.uoLong}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ uoLong: value })}
+          />
+          <NumberField
+            id="uoOversold"
+            label="Oversold (buy)"
+            min={1}
+            max={49}
+            value={params.oversold}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ oversold: value })}
+          />
+          <NumberField
+            id="uoOverbought"
+            label="Overbought (sell)"
+            min={51}
+            max={99}
+            value={params.overbought}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ overbought: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "AWESOME" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="aoFast"
+            label="Fast SMA"
+            min={2}
+            value={params.aoFast}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ aoFast: value })}
+          />
+          <NumberField
+            id="aoSlow"
+            label="Slow SMA"
+            min={3}
+            value={params.aoSlow}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ aoSlow: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "ROC" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="rocPeriod"
+            label="ROC period"
+            min={2}
+            value={params.rocPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ rocPeriod: value })}
+          />
+          <NumberField
+            id="rocSignalPeriod"
+            label="Signal SMA"
+            min={1}
+            value={params.rocSignalPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ rocSignalPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "ADX" ? (
+        <div className="mt-4">
+          <NumberField
+            id="adxPeriod"
+            label="ADX period"
+            min={2}
+            value={params.adxPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ adxPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "AROON" ? (
+        <div className="mt-4">
+          <NumberField
+            id="aroonPeriod"
+            label="Aroon period"
+            min={2}
+            value={params.aroonPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ aroonPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "SUPERTREND" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="stAtrPeriod"
+            label="ATR period"
+            min={2}
+            value={params.atrPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ atrPeriod: value })}
+          />
+          <NumberField
+            id="stAtrMultiplier"
+            label="ATR multiplier"
+            min={0.1}
+            step={0.1}
+            value={params.atrMultiplier}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ atrMultiplier: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "PSAR" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="psarStep"
+            label="AF step"
+            min={0.001}
+            step={0.01}
+            value={params.psarStep}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ psarStep: value })}
+          />
+          <NumberField
+            id="psarMax"
+            label="AF max"
+            min={0.01}
+            step={0.01}
+            value={params.psarMax}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ psarMax: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "ICHIMOKU" ? (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <NumberField
+            id="tenkanPeriod"
+            label="Tenkan"
+            min={2}
+            value={params.tenkanPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ tenkanPeriod: value })}
+          />
+          <NumberField
+            id="kijunPeriod"
+            label="Kijun"
+            min={3}
+            value={params.kijunPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ kijunPeriod: value })}
+          />
+        </div>
+      ) : null}
+
+      {strategy === "KELTNER" ? (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="keltnerPeriod"
+            label="EMA period"
+            min={2}
+            value={params.keltnerPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ keltnerPeriod: value })}
+          />
+          <NumberField
+            id="keltnerAtrPeriod"
+            label="ATR period"
+            min={2}
+            value={params.atrPeriod}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ atrPeriod: value })}
+          />
+          <NumberField
+            id="keltnerAtrMultiplier"
+            label="ATR multiplier"
+            min={0.1}
+            step={0.1}
+            value={params.atrMultiplier}
+            className={fieldClass}
+            onChange={(value) => onParamsChange({ atrMultiplier: value })}
           />
         </div>
       ) : null}
