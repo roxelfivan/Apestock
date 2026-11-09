@@ -12,6 +12,12 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Added
+
+- Indicator committee on each backtest: every technical rule votes buy, sell,
+  or keep from its last signal, with the same-window return, Sharpe, win rate,
+  and trade count next to the vote
+
 ## [0.0.2] - 2026-11-06
 
 Daily-bar persistence, live ETF split, extra strategies, and Yahoo last-bar cleanup.

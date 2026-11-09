@@ -12,6 +12,7 @@ export type StrategyName =
   | "BUY_HOLD";
 export type Timeframe = "1Y" | "3Y" | "5Y" | "CUSTOM";
 export type Signal = "BUY" | "SELL" | "HOLD";
+export type CommitteeVote = Signal;
 export type SizingMode = "fixed_from_start" | "percent_of_equity";
 export type TradeReason = "signal" | "eod";
 
@@ -119,6 +120,35 @@ export interface DrawdownPoint {
   drawdown: number;
 }
 
+export interface CommitteeMember {
+  strategy: StrategyName;
+  label: string;
+  params: StrategyParams;
+  selected: boolean;
+  ready: boolean;
+  vote: CommitteeVote;
+  latestSignal: Signal;
+  lastAction: Signal | null;
+  lastActionDate: string | null;
+  asOf: string | null;
+  lastValues: Record<string, number | null>;
+  totalReturn: number;
+  maxDrawdown: number;
+  sharpe: number;
+  winRate: number;
+  totalTrades: number;
+}
+
+export interface CommitteeResult {
+  asOf: string | null;
+  majority: CommitteeVote;
+  weighted: CommitteeVote;
+  buyVotes: number;
+  sellVotes: number;
+  holdVotes: number;
+  members: CommitteeMember[];
+}
+
 export interface BacktestResult {
   version: number;
   ticker: string;
@@ -146,6 +176,7 @@ export interface BacktestResult {
   bars: IndicatorBar[];
   metrics: RiskMetrics;
   drawdownCurve: DrawdownPoint[];
+  committee: CommitteeResult;
 }
 
 export interface SweepCell {
