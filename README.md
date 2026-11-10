@@ -2,7 +2,7 @@
 
 Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; the React UI configures the run, inspects trades, and charts the result.
 
-Current version: **0.0.2**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+Current version: **0.0.3**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
 
