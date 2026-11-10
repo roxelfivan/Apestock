@@ -262,13 +262,19 @@ export default function App() {
       <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-start gap-4">
-            <img
-              src="/app-icon.png"
-              alt=""
-              width={56}
-              height={70}
-              className="h-14 w-auto shrink-0 rounded-2xl bg-slate-950 ring-1 ring-emerald-400/25"
-            />
+            <a
+              href="/"
+              aria-label="Apestock home"
+              className="shrink-0 rounded-2xl outline-none ring-1 ring-emerald-400/25 focus-visible:ring-2 focus-visible:ring-emerald-400"
+            >
+              <img
+                src="/app-icon.png"
+                alt="Apestock"
+                width={56}
+                height={70}
+                className="h-14 w-auto rounded-2xl bg-slate-950"
+              />
+            </a>
             <div>
               <p className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</span>

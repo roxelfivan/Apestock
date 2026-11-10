@@ -15,20 +15,26 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 ### Changed
 
 - Price and universe caches persist on Vercel Blob when `BLOB_READ_WRITE_TOKEN`
-  is set, so cold starts reuse completed daily bars instead of re-hitting Yahoo
+  is set, so cold starts reuse completed daily bars instead of re-hitting feeds
 - The UI no longer syncs prices or refreshes the universe on every page load;
   ranked lists reuse a 6-hour local snapshot, and prices sync on Run / research
-- Daily bars prefer Binance (crypto) and Stooq (stocks/ETFs), then optional
-  Tiingo (`TIINGO_API_KEY`), with Yahoo as fallback
+
+## [0.0.3] - 2026-11-10
+
+Indicator committee, a larger strategy set, zone-based Hold votes, and free
+price fallbacks when Yahoo hits a quota.
 
 ### Added
 
 - Indicator committee on each backtest: every technical rule votes buy, sell,
-  or keep from its last signal, with the same-window return, Sharpe, win rate,
+  or hold from its current zone, with the same-window return, Sharpe, win rate,
   and trade count next to the vote
 - 15 more technical strategies (25 logics total): WMA, Hull MA, Stochastic RSI,
   PPO, TRIX, CCI, Ultimate oscillator, Awesome oscillator, ROC, ADX/DMI, Aroon,
   Supertrend, Parabolic SAR, Ichimoku TK cross, and Keltner channels
+- Daily prices fall back across free sources: Yahoo library, Yahoo public chart,
+  Stooq, and for crypto Coinbase, Binance.US, and Kraken
+- Ape icon in the header links to the Apestock home page (`/`)
 
 ## [0.0.2] - 2026-11-06
 
@@ -86,6 +92,7 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.3
 [0.0.2]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.2
 [0.0.1]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.1

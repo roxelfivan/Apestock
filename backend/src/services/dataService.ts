@@ -1,11 +1,11 @@
-import { DataError, sanitizeUserError } from "../errors.js";
+import { DataError } from "../errors.js";
 import { addUtcDays, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
-import { type PriceProviderName, providersFor } from "./feeds/index.js";
-import { rangeCovered, toOhlcBar } from "./feeds/parse.js";
+import { isCompleteOhlc, rangeCovered } from "./ohlcParse.js";
+import { downloadDailyBars, type PriceSource } from "./priceProviders.js";
 import { mergeBars, readStoredPrices, writeStoredPrices } from "./priceStore.js";
 
-export { rangeCovered, toOhlcBar } from "./feeds/parse.js";
+export { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
 
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
@@ -17,32 +17,14 @@ function minDate(a: string, b: string): string {
   return a <= b ? a : b;
 }
 
-export function isCompleteOhlc(bar: OhlcBar): boolean {
-  return toOhlcBar(bar) !== null;
-}
-
-export async function downloadHistoricalData(
+async function downloadHistoricalData(
   symbol: string,
   assetType: AssetType,
   startDate: string,
   endDate: string,
-): Promise<{ bars: OhlcBar[]; source: PriceProviderName }> {
+): Promise<{ bars: OhlcBar[]; source: PriceSource }> {
   if (startDate > endDate) return { bars: [], source: "yahoo" };
-
-  const errors: string[] = [];
-  for (const provider of providersFor(assetType)) {
-    try {
-      const bars = await provider.fetch(symbol, startDate, endDate);
-      if (bars.length > 0) {
-        return { bars, source: provider.name };
-      }
-    } catch (error) {
-      errors.push(`${provider.name}: ${sanitizeUserError(error, "request failed")}`);
-    }
-  }
-
-  const detail = errors.length ? ` (${errors.join("; ")})` : "";
-  throw new DataError(`Unable to fetch historical data for ${symbol}.${detail}`);
+  return downloadDailyBars(symbol, assetType, startDate, endDate);
 }
 
 function sliceBars(bars: OhlcBar[], startDate: string, endDate: string): OhlcBar[] {
@@ -64,7 +46,7 @@ async function loadCoveredBars(
   if (!rangeCovered(bars, startDate, endDate)) {
     const first = bars[0]?.date;
     const last = bars[bars.length - 1]?.date;
-    const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceProviderName }>> = [];
+    const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceSource }>> = [];
 
     if (bars.length === 0) {
       downloads.push(downloadHistoricalData(symbol, assetType, startDate, endDate));
@@ -156,7 +138,7 @@ export interface PriceSyncResult {
   completeThrough: string;
   downloaded: boolean;
   barCount: number;
-  source?: PriceProviderName;
+  source?: PriceSource | "cache";
 }
 
 export async function syncSymbolPrices(ticker: string, assetType: AssetType): Promise<PriceSyncResult> {
@@ -175,7 +157,7 @@ export async function syncSymbolPrices(ticker: string, assetType: AssetType): Pr
     completeThrough,
     downloaded,
     barCount: bars.length,
-    source: after?.source,
+    source: downloaded ? after?.source : "cache",
   };
 }
 

@@ -6,14 +6,14 @@ import {
   serverlessTmpDir,
   writeDurableText,
 } from "./durableStore.js";
-import type { PriceProviderName } from "./feeds/index.js";
+import type { PriceSource } from "./priceProviders.js";
 
 export interface StoredPrices {
   symbol: string;
   assetType: AssetType;
   bars: OhlcBar[];
   updatedAt: string;
-  source?: PriceProviderName;
+  source?: PriceSource;
 }
 
 const memory = new Map<string, StoredPrices>();

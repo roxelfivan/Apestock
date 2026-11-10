@@ -4,7 +4,7 @@ import type { CommitteeMember, CommitteeResult, CommitteeVote } from "../types";
 const VOTE_LABEL: Record<CommitteeVote, string> = {
   BUY: "Buy",
   SELL: "Sell",
-  HOLD: "Keep",
+  HOLD: "Hold",
 };
 
 function voteClass(vote: CommitteeVote, ready = true): string {
@@ -48,9 +48,10 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Committee</p>
           <h3 className="text-sm font-semibold text-white">Indicator votes</h3>
-          <p className="mt-1 max-w-xl text-[11px] text-slate-500">
-            Each rule is a member. The vote is its last buy or sell (keep if it has not flipped). Returns use this
-            window, costs, and sizing. {committee.asOf ? `As of ${committee.asOf}.` : ""}
+          <p className="mt-1 max-w-2xl text-[11px] text-slate-500">
+            Each vote is the indicator’s current zone: buy or sell only at an extreme or established trend, hold in
+            the middle. That is not a fill. Last buy/sell is the last crossover used by the backtest.{" "}
+            {committee.asOf ? `As of ${committee.asOf}.` : ""}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -73,7 +74,7 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
           <p className="text-lg font-semibold text-rose-300">{committee.sellVotes}</p>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">Keep</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">Hold</p>
           <p className="text-lg font-semibold text-slate-200">{committee.holdVotes}</p>
         </div>
       </div>
@@ -99,11 +100,11 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
               </span>
             </div>
             <p className="mt-2 text-[10px] text-slate-500">
+              {member.voteReason ?? "No zone reading"}
               {member.lastAction && member.lastActionDate
-                ? `Last ${VOTE_LABEL[member.lastAction].toLowerCase()} on ${member.lastActionDate}`
-                : "No buy/sell yet in this history"}
-              {member.latestSignal === "HOLD" && member.vote !== "HOLD" ? " · today keep" : null}
-              {member.latestSignal !== "HOLD" ? ` · today ${VOTE_LABEL[member.latestSignal].toLowerCase()}` : null}
+                ? ` · last ${VOTE_LABEL[member.lastAction].toLowerCase()} event ${member.lastActionDate}`
+                : " · no crossover yet"}
+              {member.latestSignal !== "HOLD" ? ` · new ${VOTE_LABEL[member.latestSignal].toLowerCase()} event today` : null}
             </p>
             <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-300">
               <div className="flex justify-between gap-2">

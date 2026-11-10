@@ -2,12 +2,12 @@
 
 Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; the React UI configures the run, inspects trades, and charts the result.
 
-Current version: **0.0.2**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+Current version: **0.0.3**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
 
 - Frontend: React + TypeScript (Vite), Tailwind CSS, Recharts
-- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, Binance/Stooq/Tiingo EOD, `technicalindicators`)
+- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, Stooq/Coinbase/Binance.US/Kraken EOD, `technicalindicators`)
 
 ## Universe
 
@@ -19,7 +19,7 @@ Current version: **0.0.2**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 
 ## Price cache
 
-Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`. On Vercel/Lambda writes go to `/tmp` plus in-memory storage (the bundle is read-only); if `BLOB_READ_WRITE_TOKEN` is set they also go to a private Vercel Blob so later isolates reuse the same bars. Feeds are called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Crypto daily bars come from Binance public klines first; US stocks/ETFs from Stooq (optional `STOOQ_API_KEY`), then Tiingo if `TIINGO_API_KEY` is set; Yahoo is the fallback. Run / sweep / walk-forward call `POST /api/prices/sync` for the selected ticker. Disk and Blob write failures are ignored so a backtest still runs.
+Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`. On Vercel/Lambda writes go to `/tmp` plus in-memory storage (the bundle is read-only); if `BLOB_READ_WRITE_TOKEN` is set they also go to a private Vercel Blob so later isolates reuse the same bars. Missing or newer bars are fetched in order from Yahoo's library, Yahoo's public daily chart, then **Stooq**. Crypto also tries **Coinbase**, **Binance.US**, and **Kraken** (no API keys). Yahoo's unofficial client is skipped after a quota or throttle. History is stored through the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Run / sweep / walk-forward call `POST /api/prices/sync` for the selected ticker. Disk and Blob write failures are ignored so a backtest still runs. Ranked universe lists still come from Yahoo.
 
 ## Strategies
 
@@ -44,7 +44,7 @@ Channels
 
 - **BUY_HOLD** — one full-capital buy on the first fill
 
-After a run, the UI shows an **indicator committee**: every technical rule above (not buy-and-hold) votes from its last buy/sell. Keep means the rule has not flipped, or never fired. Majority is an unweighted count; Sharpe-weighted ignores keep and weights the rest by `max(Sharpe, 0.1)`.
+After a run, the UI shows an **indicator committee**. Each technical rule (not buy-and-hold) votes from its **current zone**: buy or sell only at an extreme or established trend, **hold** in the middle (RSI between 30–70, close inside Bollinger/Keltner, ADX below 20, and so on). That vote is not a fill. Chart triangles are T+1 open fills of the strategy you ran. Majority is an unweighted count; Sharpe-weighted ignores hold and weights the rest by `max(Sharpe, 0.1)`.
 
 Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.
 
@@ -89,7 +89,6 @@ The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the E
 Optional backend env:
 
 - `BLOB_READ_WRITE_TOKEN` — private Vercel Blob store so price and universe JSON survive cold starts (create a Blob store on the project)
-- `TIINGO_API_KEY` — extra US EOD quota after Stooq
 - `STOOQ_API_KEY` — send if Stooq starts requiring a key on the CSV endpoint
 
 ## API
@@ -115,7 +114,7 @@ Optional backend env:
 
 Timeframe is `1Y`, `3Y`, `5Y`, or `CUSTOM` (requires `startDate` and `endDate` as `YYYY-MM-DD`).
 
-The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, risk metrics, and an indicator committee (`version: 3`). The committee runs every technical strategy on the same window. Each member votes **buy**, **sell**, or **keep** from its last actionable signal, and reports how that rule performed.
+The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, risk metrics, and an indicator committee (`version: 3`). The committee runs every technical strategy on the same window. Each member votes **buy**, **sell**, or **hold** from its current zone, and reports how that rule performed.
 
 Also:
 
