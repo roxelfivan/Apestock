@@ -10,7 +10,7 @@ import ResearchPanels from "./components/ResearchPanels";
 import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
-import { isValidTicker, readStoredUniverse, storeUniverse, universeFor } from "./data/universes";
+import { isValidTicker, readStoredUniverse, storeUniverse, universeFor, universeIsFresh } from "./data/universes";
 import { fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
 import { sanitizeUserError } from "./lib/errors";
 import { DEFAULT_PARAMS } from "./lib/defaults";
@@ -120,6 +120,10 @@ export default function App() {
   }, [config]);
 
   useEffect(() => {
+    if (universeIsFresh(readStoredUniverse())) {
+      setUniverseLoading(false);
+      return;
+    }
     let cancelled = false;
     fetchUniverse()
       .then((snapshot) => {
@@ -139,18 +143,6 @@ export default function App() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    const symbol = ticker.trim().toUpperCase();
-    if (!symbol) return;
-    if (universe && !allowAnySymbol && !isValidTicker(symbol, assetType, universe)) return;
-    const handle = window.setTimeout(() => {
-      void syncPrices(symbol, assetType)
-        .then(setPriceSync)
-        .catch(() => undefined);
-    }, 400);
-    return () => window.clearTimeout(handle);
-  }, [ticker, assetType, allowAnySymbol, universe]);
 
   function markStale() {
     if (result) setStale(true);
@@ -178,6 +170,17 @@ export default function App() {
     markStale();
   }
 
+  async function refreshPrices(): Promise<void> {
+    const symbol = ticker.trim().toUpperCase();
+    if (!symbol) return;
+    if (universe && !allowAnySymbol && !isValidTicker(symbol, assetType, universe)) return;
+    try {
+      setPriceSync(await syncPrices(symbol, assetType));
+    } catch {
+      // Backtest/research still fetch bars; skip UI status on a sync failure.
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tickerValid) {
@@ -192,6 +195,7 @@ export default function App() {
     setLoading(true);
     setError("");
     try {
+      await refreshPrices();
       const payload = await runBacktest(config);
       setResult(payload);
       setStale(false);
@@ -208,6 +212,7 @@ export default function App() {
     setResearchBusy(true);
     setError("");
     try {
+      await refreshPrices();
       setSweep(await runSweep(config));
     } catch (err) {
       setError(sanitizeUserError(err, "Sweep failed."));
@@ -220,6 +225,7 @@ export default function App() {
     setResearchBusy(true);
     setError("");
     try {
+      await refreshPrices();
       setWalkForward(await runWalkForward(config));
     } catch (err) {
       setError(sanitizeUserError(err, "Walk-forward failed."));
@@ -278,7 +284,7 @@ export default function App() {
               </p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Live top-50 S&P, Nasdaq, stock/bond/other ETF, and crypto universes, or any Yahoo symbol. Daily bars, 24
+                Live top-50 S&P, Nasdaq, stock/bond/other ETF, and crypto universes, or any symbol. Daily bars, 24
                 technical rules plus buy-and-hold, optional costs, and inspectable trades. Signals on the close; fills at the next open.
               </p>
             </div>

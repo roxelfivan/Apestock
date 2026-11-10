@@ -299,11 +299,11 @@ export default function AssetSelector({
           onChange={(event) => onAllowAnySymbolChange(event.target.checked)}
           className="rounded border-slate-600 bg-slate-950 text-emerald-400"
         />
-        Allow any Yahoo symbol (not just the curated list)
+        Allow any symbol (not just the curated list)
       </label>
       <p className={`mt-2 text-xs ${valid ? "text-slate-500" : "text-rose-400"}`}>
         {universeLoading && symbols.length === 0
-          ? "Loading live top-50 lists from Yahoo (cached for 6 hours)."
+          ? "Loading live top-50 lists (cached for 6 hours)."
           : universeError && symbols.length === 0
             ? universeError
             : allowAnySymbol

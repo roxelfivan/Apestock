@@ -33,3 +33,10 @@ export function toOhlcBar(row: { date?: unknown; open?: unknown; high?: unknown;
 export function isCompleteOhlc(bar: OhlcBar): boolean {
   return toOhlcBar(bar) !== null;
 }
+
+export function rangeCovered(bars: OhlcBar[], startDate: string, endDate: string): boolean {
+  if (bars.length === 0) return false;
+  const first = bars[0]?.date;
+  const last = bars[bars.length - 1]?.date;
+  return Boolean(first && last && first <= startDate && last >= endDate);
+}

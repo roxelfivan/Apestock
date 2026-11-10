@@ -5,9 +5,10 @@ import {
   yahooSymbol,
 } from "../data/universe.js";
 import { DataError, sanitizeUserError } from "../errors.js";
+import { readStoredUniverse, writeStoredUniverse } from "./universeStore.js";
 import { predefinedScreener, screenQuotes, type ScreenerQuote } from "./yahooClient.js";
 
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+export const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
 const USER_AGENT = "Apestock/1.0 (https://github.com/roxelfivan/Apestock)";
 
 let cache: { snapshot: UniverseSnapshot; expiresAt: number } | null = null;
@@ -304,25 +305,43 @@ async function downloadSnapshot(): Promise<UniverseSnapshot> {
   };
 }
 
+function expiresAtFrom(fetchedAt: string): number {
+  const parsed = Date.parse(fetchedAt);
+  return Number.isFinite(parsed) ? parsed + UNIVERSE_TTL_MS : 0;
+}
+
+export function universeIsFresh(snapshot: UniverseSnapshot, now = Date.now()): boolean {
+  return expiresAtFrom(snapshot.fetchedAt) > now;
+}
+
 export async function getUniverseSnapshot(): Promise<UniverseSnapshot> {
   if (cache && Date.now() < cache.expiresAt) return cache.snapshot;
   if (inflight) return inflight;
 
-  const stale = cache?.snapshot ?? null;
-  inflight = downloadSnapshot()
-    .then((snapshot) => {
-      cache = { snapshot, expiresAt: Date.now() + CACHE_TTL_MS };
+  inflight = (async () => {
+    const durable = (await readStoredUniverse()) ?? cache?.snapshot;
+    if (durable && universeIsFresh(durable)) {
+      cache = { snapshot: durable, expiresAt: expiresAtFrom(durable.fetchedAt) };
+      return durable;
+    }
+
+    try {
+      const snapshot = await downloadSnapshot();
+      cache = { snapshot, expiresAt: Date.now() + UNIVERSE_TTL_MS };
+      await writeStoredUniverse(snapshot);
       return snapshot;
-    })
-    .catch((error: unknown) => {
-      if (stale) return stale;
+    } catch (error: unknown) {
+      if (durable) {
+        cache = { snapshot: durable, expiresAt: Date.now() + 5 * 60 * 1000 };
+        return durable;
+      }
       throw new DataError(
         `Unable to load the live ticker universe: ${sanitizeUserError(error, "Yahoo Finance is temporarily unavailable.")}`,
       );
-    })
-    .finally(() => {
-      inflight = null;
-    });
+    }
+  })().finally(() => {
+    inflight = null;
+  });
 
   return inflight;
 }

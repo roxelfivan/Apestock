@@ -12,6 +12,13 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Changed
+
+- Price and universe caches persist on Vercel Blob when `BLOB_READ_WRITE_TOKEN`
+  is set, so cold starts reuse completed daily bars instead of re-hitting feeds
+- The UI no longer syncs prices or refreshes the universe on every page load;
+  ranked lists reuse a 6-hour local snapshot, and prices sync on Run / research
+
 ## [0.0.3] - 2026-11-10
 
 Indicator committee, a larger strategy set, zone-based Hold votes, and free
