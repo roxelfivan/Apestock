@@ -18,6 +18,9 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   is set, so cold starts reuse completed daily bars instead of re-hitting feeds
 - The UI no longer syncs prices or refreshes the universe on every page load;
   ranked lists reuse a 6-hour local snapshot, and prices sync on Run / research
+- Daily-bar fetches keep the #20 order first: Yahoo library, Yahoo public chart,
+  Stooq, then Coinbase / Binance.US / Kraken for crypto; the unofficial Yahoo
+  client is skipped after a quota or throttle
 
 ## [0.0.3] - 2026-11-10
 

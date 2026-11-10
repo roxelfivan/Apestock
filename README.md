@@ -89,7 +89,6 @@ The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the E
 Optional backend env:
 
 - `BLOB_READ_WRITE_TOKEN` — private Vercel Blob store so price and universe JSON survive cold starts (create a Blob store on the project)
-- `STOOQ_API_KEY` — send if Stooq starts requiring a key on the CSV endpoint
 
 ## API
 

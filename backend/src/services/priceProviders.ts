@@ -1,10 +1,31 @@
-import { DataError } from "../errors.js";
+import { DataError, isQuotaOrThrottleError } from "../errors.js";
 import { addUtcDays } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
 import { toOhlcBar } from "./ohlcParse.js";
 import { yahooFinance } from "./yahooClient.js";
 
 export type PriceSource = "yahoo" | "stooq" | "coinbase" | "binance" | "kraken";
+export type PriceFallbackStep =
+  | "yahoo-library"
+  | "yahoo-chart"
+  | "stooq"
+  | "coinbase"
+  | "binance"
+  | "kraken";
+
+let skipYahooLibrary = false;
+
+export function resetPriceProviderState(): void {
+  skipYahooLibrary = false;
+}
+
+export function fallbackSteps(assetType: AssetType): PriceFallbackStep[] {
+  const steps: PriceFallbackStep[] = ["yahoo-library", "yahoo-chart", "stooq"];
+  if (assetType === "CRYPTO") {
+    steps.push("coinbase", "binance", "kraken");
+  }
+  return steps;
+}
 
 const FETCH_MS = 15_000;
 const BROWSER_UA =
@@ -271,28 +292,39 @@ export async function downloadDailyBars(
 ): Promise<{ bars: OhlcBar[]; source: PriceSource }> {
   if (startDate > endDate) return { bars: [], source: "yahoo" };
 
-  const attempts: Array<{ source: PriceSource; run: () => Promise<OhlcBar[]> }> = [
-    { source: "yahoo", run: () => fromYahooLibrary(symbol, startDate, endDate) },
-    { source: "yahoo", run: () => fromYahooChart(symbol, assetType, startDate, endDate) },
-    { source: "stooq", run: () => fromStooq(symbol, assetType, startDate, endDate) },
+  const attempts: Array<{
+    step: PriceFallbackStep;
+    source: PriceSource;
+    run: () => Promise<OhlcBar[]>;
+  }> = [
+    { step: "yahoo-library", source: "yahoo", run: () => fromYahooLibrary(symbol, startDate, endDate) },
+    { step: "yahoo-chart", source: "yahoo", run: () => fromYahooChart(symbol, assetType, startDate, endDate) },
+    { step: "stooq", source: "stooq", run: () => fromStooq(symbol, assetType, startDate, endDate) },
   ];
   if (assetType === "CRYPTO") {
     attempts.push(
-      { source: "coinbase", run: () => fromCoinbase(symbol, startDate, endDate) },
-      { source: "binance", run: () => fromBinanceUs(symbol, startDate, endDate) },
-      { source: "kraken", run: () => fromKraken(symbol, startDate, endDate) },
+      { step: "coinbase", source: "coinbase", run: () => fromCoinbase(symbol, startDate, endDate) },
+      { step: "binance", source: "binance", run: () => fromBinanceUs(symbol, startDate, endDate) },
+      { step: "kraken", source: "kraken", run: () => fromKraken(symbol, startDate, endDate) },
     );
   }
 
   const failures: string[] = [];
   for (const attempt of attempts) {
+    if (attempt.step === "yahoo-library" && skipYahooLibrary) {
+      failures.push("yahoo-library: skipped after quota");
+      continue;
+    }
     try {
       const bars = await attempt.run();
       if (bars.length > 0) return { bars, source: attempt.source };
-      failures.push(`${attempt.source}: empty`);
+      failures.push(`${attempt.step}: empty`);
     } catch (error) {
+      if (attempt.step === "yahoo-library" && isQuotaOrThrottleError(error)) {
+        skipYahooLibrary = true;
+      }
       const reason = error instanceof Error ? error.message : "request failed";
-      failures.push(`${attempt.source}: ${reason}`);
+      failures.push(`${attempt.step}: ${reason}`);
     }
   }
 

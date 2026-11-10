@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   binanceSymbol,
+  fallbackSteps,
   parseBinanceKlines,
   parseCoinbaseCandles,
   parseKrakenOhlc,
@@ -9,6 +10,18 @@ import {
   parseYahooChartPayload,
   stooqSymbol,
 } from "./priceProviders.js";
+
+test("fallback order is Yahoo library, Yahoo chart, Stooq, then crypto venues", () => {
+  assert.deepEqual(fallbackSteps("STOCK"), ["yahoo-library", "yahoo-chart", "stooq"]);
+  assert.deepEqual(fallbackSteps("CRYPTO"), [
+    "yahoo-library",
+    "yahoo-chart",
+    "stooq",
+    "coinbase",
+    "binance",
+    "kraken",
+  ]);
+});
 
 test("stooq maps US and crypto Yahoo tickers", () => {
   assert.equal(stooqSymbol("AAPL", "STOCK"), "aapl.us");
