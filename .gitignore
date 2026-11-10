@@ -1,9 +1,12 @@
 node_modules/
 dist/
+dist-ssr/
 /data/
 /backend/data/
 .DS_Store
 *.log
+*.local
 .env
 .env.*
 .vercel
+.idea/

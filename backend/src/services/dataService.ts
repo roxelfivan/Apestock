@@ -5,8 +5,6 @@ import { isCompleteOhlc, rangeCovered } from "./ohlcParse.js";
 import { downloadDailyBars, type PriceSource } from "./priceProviders.js";
 import { mergeBars, readStoredPrices, writeStoredPrices } from "./priceStore.js";
 
-export { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
-
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
 function cloneBars(bars: OhlcBar[]): OhlcBar[] {
@@ -15,16 +13,6 @@ function cloneBars(bars: OhlcBar[]): OhlcBar[] {
 
 function minDate(a: string, b: string): string {
   return a <= b ? a : b;
-}
-
-async function downloadHistoricalData(
-  symbol: string,
-  assetType: AssetType,
-  startDate: string,
-  endDate: string,
-): Promise<{ bars: OhlcBar[]; source: PriceSource }> {
-  if (startDate > endDate) return { bars: [], source: "yahoo" };
-  return downloadDailyBars(symbol, assetType, startDate, endDate);
 }
 
 function sliceBars(bars: OhlcBar[], startDate: string, endDate: string): OhlcBar[] {
@@ -49,13 +37,13 @@ async function loadCoveredBars(
     const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceSource }>> = [];
 
     if (bars.length === 0) {
-      downloads.push(downloadHistoricalData(symbol, assetType, startDate, endDate));
+      downloads.push(downloadDailyBars(symbol, assetType, startDate, endDate));
     } else {
       if (first && first > startDate) {
-        downloads.push(downloadHistoricalData(symbol, assetType, startDate, addUtcDays(first, -1)));
+        downloads.push(downloadDailyBars(symbol, assetType, startDate, addUtcDays(first, -1)));
       }
       if (last && last < endDate) {
-        downloads.push(downloadHistoricalData(symbol, assetType, last, endDate));
+        downloads.push(downloadDailyBars(symbol, assetType, last, endDate));
       }
     }
 
@@ -159,8 +147,4 @@ export async function syncSymbolPrices(ticker: string, assetType: AssetType): Pr
     barCount: bars.length,
     source: downloaded ? after?.source : "cache",
   };
-}
-
-export function priceWindowEnd(assetType: AssetType, requestedEnd: string): string {
-  return minDate(requestedEnd, latestCompleteSession(assetType));
 }

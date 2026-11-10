@@ -2,10 +2,6 @@ export function round(value: number, digits = 2): number {
   return Number(value.toFixed(digits));
 }
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export function mean(values: number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
