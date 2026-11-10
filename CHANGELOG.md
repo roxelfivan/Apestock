@@ -12,18 +12,22 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-11-10
+
+Indicator committee, a larger strategy set, zone-based Hold votes, and free
+price fallbacks when Yahoo hits a quota.
+
 ### Added
 
 - Indicator committee on each backtest: every technical rule votes buy, sell,
-  or keep from its last signal, with the same-window return, Sharpe, win rate,
+  or hold from its current zone, with the same-window return, Sharpe, win rate,
   and trade count next to the vote
 - 15 more technical strategies (25 logics total): WMA, Hull MA, Stochastic RSI,
   PPO, TRIX, CCI, Ultimate oscillator, Awesome oscillator, ROC, ADX/DMI, Aroon,
   Supertrend, Parabolic SAR, Ichimoku TK cross, and Keltner channels
-- Committee votes from the current indicator zone (hold in the middle), not the
-  last crossover; labels use Hold instead of Keep
 - Daily prices fall back across free sources: Yahoo library, Yahoo public chart,
   Stooq, and for crypto Coinbase, Binance.US, and Kraken
+- Ape icon in the header links to the Apestock home page (`/`)
 
 ## [0.0.2] - 2026-11-06
 
@@ -81,6 +85,7 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.3
 [0.0.2]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.2
 [0.0.1]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.1
