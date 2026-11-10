@@ -19,9 +19,18 @@ export class DataError extends Error {
 const HTML_ERROR =
   "Yahoo Finance is temporarily unavailable. Wait a minute and try again.";
 
+const QUOTA_ERROR =
+  "Yahoo's unofficial feed hit a free-request limit. Daily bars then try Yahoo's public chart, Stooq, and for crypto Coinbase / Binance.US / Kraken.";
+
+export function isQuotaOrThrottleError(raw: unknown): boolean {
+  const text = typeof raw === "string" ? raw : raw instanceof Error ? raw.message : String(raw ?? "");
+  return /quota has been exceeded|too many requests|rate limit|429|throttle|unofficial-api/i.test(text);
+}
+
 export function sanitizeUserError(raw: unknown, fallback = "Request failed."): string {
   const text = typeof raw === "string" ? raw.trim() : raw instanceof Error ? raw.message.trim() : "";
   if (!text) return fallback;
+  if (isQuotaOrThrottleError(text)) return QUOTA_ERROR;
   if (
     /<!DOCTYPE|<html[\s>]|<\/html>|sad-panda|Inactivity Timeout|query2\.finance\.yahoo/i.test(text)
   ) {

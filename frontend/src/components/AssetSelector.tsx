@@ -315,7 +315,20 @@ export default function AssetSelector({
       {priceSync && priceSync.ticker === normalized && priceSync.lastBar ? (
         <p className="mt-1 text-xs text-slate-500">
           Saved daily bars through {priceSync.lastBar}
-          {priceSync.downloaded ? " (updated from Yahoo)" : " (local cache)"}.
+          {priceSync.downloaded
+            ? ` (updated from ${
+                priceSync.source === "stooq"
+                  ? "Stooq"
+                  : priceSync.source === "coinbase"
+                    ? "Coinbase"
+                    : priceSync.source === "binance"
+                      ? "Binance"
+                      : priceSync.source === "kraken"
+                        ? "Kraken"
+                        : "Yahoo"
+              })`
+            : " (local cache)"}
+          .
         </p>
       ) : null}
     </section>

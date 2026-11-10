@@ -22,6 +22,8 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   Supertrend, Parabolic SAR, Ichimoku TK cross, and Keltner channels
 - Committee votes from the current indicator zone (hold in the middle), not the
   last crossover; labels use Hold instead of Keep
+- Daily prices fall back across free sources: Yahoo library, Yahoo public chart,
+  Stooq, and for crypto Coinbase, Binance.US, and Kraken
 
 ## [0.0.2] - 2026-11-06
 
