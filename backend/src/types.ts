@@ -166,6 +166,7 @@ export interface CommitteeMember {
   latestSignal: Signal;
   lastAction: Signal | null;
   lastActionDate: string | null;
+  voteReason: string;
   asOf: string | null;
   lastValues: Record<string, number | null>;
   totalReturn: number;

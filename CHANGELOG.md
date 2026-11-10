@@ -20,6 +20,8 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 - 15 more technical strategies (25 logics total): WMA, Hull MA, Stochastic RSI,
   PPO, TRIX, CCI, Ultimate oscillator, Awesome oscillator, ROC, ADX/DMI, Aroon,
   Supertrend, Parabolic SAR, Ichimoku TK cross, and Keltner channels
+- Committee votes from the current indicator zone (hold in the middle), not the
+  last crossover; labels use Hold instead of Keep
 
 ## [0.0.2] - 2026-11-06
 

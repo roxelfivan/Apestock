@@ -44,7 +44,7 @@ Channels
 
 - **BUY_HOLD** — one full-capital buy on the first fill
 
-After a run, the UI shows an **indicator committee**: every technical rule above (not buy-and-hold) votes from its last buy/sell. Keep means the rule has not flipped, or never fired. Majority is an unweighted count; Sharpe-weighted ignores keep and weights the rest by `max(Sharpe, 0.1)`.
+After a run, the UI shows an **indicator committee**. Each technical rule (not buy-and-hold) votes from its **current zone**: buy or sell only at an extreme or established trend, **hold** in the middle (RSI between 30–70, close inside Bollinger/Keltner, ADX below 20, and so on). That vote is not a fill. Chart triangles are T+1 open fills of the strategy you ran. Majority is an unweighted count; Sharpe-weighted ignores hold and weights the rest by `max(Sharpe, 0.1)`.
 
 Signals are computed on day **T close**. Orders fill on day **T+1 open**. Extra bars are fetched before the test window so indicators are warm. Sizing is long-only (no shorts). Default sizing spends `tradePercent` of **starting** capital (20%); `% of equity` is optional. Optional commission (bps and $ / share) and slippage (bps of the fill). Each SELL closes the oldest lot (FIFO). Open lots are marked at the last close and tagged `eod` in the blotter.
 
@@ -109,7 +109,7 @@ The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the E
 
 Timeframe is `1Y`, `3Y`, `5Y`, or `CUSTOM` (requires `startDate` and `endDate` as `YYYY-MM-DD`).
 
-The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, risk metrics, and an indicator committee (`version: 3`). The committee runs every technical strategy on the same window. Each member votes **buy**, **sell**, or **keep** from its last actionable signal, and reports how that rule performed.
+The response includes equity, events, a trade blotter, OHLC + indicator series, drawdown, risk metrics, and an indicator committee (`version: 3`). The committee runs every technical strategy on the same window. Each member votes **buy**, **sell**, or **hold** from its current zone, and reports how that rule performed.
 
 Also:
 
