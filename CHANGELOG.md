@@ -12,6 +12,11 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Removed
+
+- Unused parallel price-feed module (`backend/src/services/feeds`) left over from the
+  quota-cut work; daily bars still come from `priceProviders.ts`
+
 ### Changed
 
 - Price and universe caches persist on Vercel Blob when `BLOB_READ_WRITE_TOKEN`

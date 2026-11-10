@@ -45,9 +45,6 @@ export interface StrategyParams {
   rsiPeriod?: number;
   oversold?: number;
   overbought?: number;
-  period?: number;
-  oversoldThreshold?: number;
-  overboughtThreshold?: number;
   fastPeriod?: number;
   slowPeriod?: number;
   signalPeriod?: number;

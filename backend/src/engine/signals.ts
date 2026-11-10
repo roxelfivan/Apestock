@@ -66,7 +66,7 @@ export function warmupBars(strategy: StrategyName, params: StrategyParams): numb
     case "HMA":
       return requireInt(params.hmaPeriod ?? 16, "hmaPeriod", 2) + 4;
     case "RSI":
-      return requireInt(params.rsiPeriod ?? params.period, "rsiPeriod", 2) + 2;
+      return requireInt(params.rsiPeriod, "rsiPeriod", 2) + 2;
     case "MACD":
     case "PPO":
       return requireInt(params.slowPeriod ?? 26, "slowPeriod", 3) + requireInt(params.signalPeriod ?? 9, "signalPeriod", 1) + 1;
@@ -150,9 +150,9 @@ export function computeSignals(
   }
 
   if (strategy === "RSI") {
-    const rsiPeriod = requireInt(params.rsiPeriod ?? params.period, "rsiPeriod", 2);
-    const oversold = requireNumber(params.oversold ?? params.oversoldThreshold, "oversold");
-    const overbought = requireNumber(params.overbought ?? params.overboughtThreshold, "overbought");
+    const rsiPeriod = requireInt(params.rsiPeriod, "rsiPeriod", 2);
+    const oversold = requireNumber(params.oversold, "oversold");
+    const overbought = requireNumber(params.overbought, "overbought");
     if (oversold <= 0 || overbought >= 100 || oversold >= overbought) {
       throw new ValidationError("oversold must be below overbought, within 0–100.");
     }

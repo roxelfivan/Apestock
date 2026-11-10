@@ -203,7 +203,9 @@ async function fromYahooChart(symbol: string, assetType: AssetType, startDate: s
 
 async function fromStooq(symbol: string, assetType: AssetType, startDate: string, endDate: string): Promise<OhlcBar[]> {
   const s = stooqSymbol(symbol, assetType);
-  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(s)}&d1=${yyyymmdd(startDate)}&d2=${yyyymmdd(endDate)}&i=d`;
+  const key = process.env.STOOQ_API_KEY;
+  const qs = key ? `&apikey=${encodeURIComponent(key)}` : "";
+  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(s)}&d1=${yyyymmdd(startDate)}&d2=${yyyymmdd(endDate)}&i=d${qs}`;
   const csv = await fetchText(url);
   if (/<!DOCTYPE|<html/i.test(csv)) {
     throw new DataError("Stooq returned an HTML challenge page.");

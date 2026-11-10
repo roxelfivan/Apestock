@@ -1,24 +1,5 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
+# Covered by the repo-root .gitignore. Keep this file so Vite-local tools
+# that look next to package.json still ignore dist and node_modules.
 node_modules
 dist
-dist-ssr
 *.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

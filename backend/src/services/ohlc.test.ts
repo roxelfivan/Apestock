@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isCompleteOhlc, rangeCovered, toOhlcBar } from "./dataService.js";
+import { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
 
 test("toOhlcBar drops Yahoo's in-progress session where close is null", () => {
   assert.equal(
