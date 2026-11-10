@@ -59,6 +59,21 @@ test("selected strategy uses the request params instead of defaults", () => {
   assert.equal(sma?.selected, true);
 });
 
+test("channel indicators vote hold when close sits mid-range", () => {
+  const closes = Array.from({ length: 80 }, (_, i) => 100 + Math.sin(i / 4) * 8);
+  closes[closes.length - 1] = 100;
+  const ohlc = barsFromCloses(closes);
+  const committee = computeCommittee(ohlc, 20, engineConfig, {
+    strategy: "BOLLINGER",
+    params: DEFAULT_STRATEGY_PARAMS.BOLLINGER,
+  });
+  const bb = committee.members.find((member) => member.strategy === "BOLLINGER");
+  const keltner = committee.members.find((member) => member.strategy === "KELTNER");
+  assert.equal(bb?.vote, "HOLD");
+  assert.equal(keltner?.vote, "HOLD");
+  assert.ok((committee.holdVotes ?? 0) >= 2);
+});
+
 test("majority follows the largest vote bucket", () => {
   const ohlc = barsFromCloses(Array.from({ length: 80 }, (_, i) => 10 + i));
   const committee = computeCommittee(ohlc, 10, engineConfig, {
