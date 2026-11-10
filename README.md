@@ -7,19 +7,19 @@ Current version: **0.0.2**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 ## Stack
 
 - Frontend: React + TypeScript (Vite), Tailwind CSS, Recharts
-- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, `technicalindicators`)
+- Backend: Node.js + TypeScript (Express, `tsx`, `yahoo-finance2`, Binance/Stooq/Tiingo EOD, `technicalindicators`)
 
 ## Universe
 
 - US stocks: live top 50 S&P 500 and Nasdaq by market cap
 - US ETFs: live top 50 stock ETFs, top 50 bond ETFs, and top 50 non-stock/non-bond ETFs (commodities, crypto ETFs, allocation) by AUM
 - Crypto: live top 50 by market cap (Yahoo `-USD` pairs)
-- Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours
-- Optional open Yahoo symbol (`allowAnySymbol`)
+- Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours (memory, disk/Blob, and the browser)
+- Optional open symbol (`allowAnySymbol`)
 
 ## Price cache
 
-Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`; on Vercel/Lambda it uses `/tmp` plus in-memory storage because `/var/task` is read-only. Yahoo is called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`) so the store is current without downloading the whole universe. Disk write failures are ignored so a backtest still runs.
+Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`. On Vercel/Lambda writes go to `/tmp` plus in-memory storage (the bundle is read-only); if `BLOB_READ_WRITE_TOKEN` is set they also go to a private Vercel Blob so later isolates reuse the same bars. Feeds are called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Crypto daily bars come from Binance public klines first; US stocks/ETFs from Stooq (optional `STOOQ_API_KEY`), then Tiingo if `TIINGO_API_KEY` is set; Yahoo is the fallback. Run / sweep / walk-forward call `POST /api/prices/sync` for the selected ticker. Disk and Blob write failures are ignored so a backtest still runs.
 
 ## Strategies
 
@@ -86,6 +86,12 @@ npm run typecheck
 
 The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the Express service.
 
+Optional backend env:
+
+- `BLOB_READ_WRITE_TOKEN` — private Vercel Blob store so price and universe JSON survive cold starts (create a Blob store on the project)
+- `TIINGO_API_KEY` — extra US EOD quota after Stooq
+- `STOOQ_API_KEY` — send if Stooq starts requiring a key on the CSV endpoint
+
 ## API
 
 `POST /api/backtest`
@@ -115,7 +121,7 @@ Also:
 
 - `GET /api/health`
 - `GET /api/universe?assetType=STOCK|CRYPTO`
-- `POST /api/prices/sync` — `{ "ticker": "AAPL", "assetType": "STOCK" }` incremental EOD refresh
+- `POST /api/prices/sync` — `{ "ticker": "AAPL", "assetType": "STOCK" }` incremental EOD refresh (UI calls this on Run, not on every page load)
 - `POST /api/backtest/sweep` — small parameter grid + overfitting warning
 - `POST /api/backtest/walk-forward` — expanding-window in-sample pick, out-of-sample test
 

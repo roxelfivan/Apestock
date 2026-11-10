@@ -12,6 +12,15 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Changed
+
+- Price and universe caches persist on Vercel Blob when `BLOB_READ_WRITE_TOKEN`
+  is set, so cold starts reuse completed daily bars instead of re-hitting Yahoo
+- The UI no longer syncs prices or refreshes the universe on every page load;
+  ranked lists reuse a 6-hour local snapshot, and prices sync on Run / research
+- Daily bars prefer Binance (crypto) and Stooq (stocks/ETFs), then optional
+  Tiingo (`TIINGO_API_KEY`), with Yahoo as fallback
+
 ### Added
 
 - Indicator committee on each backtest: every technical rule votes buy, sell,

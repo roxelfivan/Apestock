@@ -276,4 +276,5 @@ export interface PriceSyncResult {
   completeThrough: string;
   downloaded: boolean;
   barCount: number;
+  source?: string;
 }

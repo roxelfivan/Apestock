@@ -19,6 +19,13 @@ export function isValidTicker(ticker: string, assetType: AssetType, snapshot: Un
 }
 
 export const UNIVERSE_STORAGE_KEY = "apestock.universe.v2";
+export const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
+
+export function universeIsFresh(snapshot: UniverseSnapshot | null, now = Date.now()): boolean {
+  if (!snapshot?.fetchedAt) return false;
+  const parsed = Date.parse(snapshot.fetchedAt);
+  return Number.isFinite(parsed) && parsed + UNIVERSE_TTL_MS > now;
+}
 
 export function readStoredUniverse(): UniverseSnapshot | null {
   try {
