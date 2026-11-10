@@ -14,3 +14,7 @@ test("sanitizeUserError hides Yahoo HTML timeout pages", () => {
 test("sanitizeUserError keeps short API messages", () => {
   assert.equal(sanitizeUserError("Missing ticker."), "Missing ticker.");
 });
+
+test("sanitizeUserError maps Yahoo quota pages to a fallback hint", () => {
+  assert.match(sanitizeUserError("The quota has been exceeded."), /Yahoo's unofficial feed/);
+});

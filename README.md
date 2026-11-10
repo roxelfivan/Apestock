@@ -19,7 +19,7 @@ Current version: **0.0.2**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 
 ## Price cache
 
-Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`; on Vercel/Lambda it uses `/tmp` plus in-memory storage because `/var/task` is read-only. Yahoo is called only for missing older history or for days after the last saved bar, up to the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`) so the store is current without downloading the whole universe. Disk write failures are ignored so a backtest still runs.
+Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`; on Vercel/Lambda it uses `/tmp` plus in-memory storage because `/var/task` is read-only. Missing or newer bars are fetched in order from Yahoo's library, Yahoo's public daily chart, then **Stooq**. Crypto also tries **Coinbase**, **Binance.US**, and **Kraken** (no API keys). Yahoo's unofficial client is skipped after a quota or throttle. History is stored through the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Opening the app syncs the selected ticker (`POST /api/prices/sync`). Disk write failures are ignored so a backtest still runs. Ranked universe lists still come from Yahoo.
 
 ## Strategies
 
