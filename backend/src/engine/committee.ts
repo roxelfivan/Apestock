@@ -12,6 +12,7 @@ import { runEngine, type EngineConfig } from "./engine.js";
 import { COMMITTEE_STRATEGIES, DEFAULT_STRATEGY_PARAMS, STRATEGY_LABELS } from "./defaults.js";
 import { computeRiskMetrics, maxDrawdownPct } from "./metrics.js";
 import { computeSignals, warmupBars } from "./signals.js";
+import { regimeVote } from "./stance.js";
 
 export function committeeFetchWarmup(): number {
   let maxWarmup = 0;
@@ -112,6 +113,7 @@ export function computeCommittee(
           latestSignal: "HOLD",
           lastAction: null,
           lastActionDate: null,
+          voteReason: "Not enough history",
           asOf: bars[lastIndex]?.date ?? null,
           lastValues: {},
           totalReturn: 0,
@@ -123,7 +125,8 @@ export function computeCommittee(
         continue;
       }
 
-      const stance = stanceFromSignals(bars, signals, lastIndex);
+      const lastEvent = stanceFromSignals(bars, signals, lastIndex);
+      const regime = regimeVote(strategy, bars, series, params, lastIndex);
       const engine = runEngine(bars, signals, engineConfig, { startIndex });
       const values = engine.equityCurve.map((point) => point.portfolioValue);
       const winTrades = engine.trades.filter((trade) => trade.pnl > 0);
@@ -135,10 +138,11 @@ export function computeCommittee(
         params,
         selected: strategy === selected.strategy,
         ready: true,
-        vote: stance.vote,
-        latestSignal: stance.latestSignal,
-        lastAction: stance.lastAction,
-        lastActionDate: stance.lastActionDate,
+        vote: regime.vote,
+        latestSignal: lastEvent.latestSignal,
+        lastAction: lastEvent.lastAction,
+        lastActionDate: lastEvent.lastActionDate,
+        voteReason: regime.reason,
         asOf: bars[lastIndex]?.date ?? null,
         lastValues: snapshotValues(series, lastIndex),
         totalReturn: round(((engine.finalValue - engineConfig.startingCapital) / engineConfig.startingCapital) * 100),
@@ -158,6 +162,7 @@ export function computeCommittee(
         latestSignal: "HOLD",
         lastAction: null,
         lastActionDate: null,
+        voteReason: "Could not compute",
         asOf: bars[lastIndex]?.date ?? null,
         lastValues: {},
         totalReturn: 0,
