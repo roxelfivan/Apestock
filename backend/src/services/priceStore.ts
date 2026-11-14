@@ -1,10 +1,13 @@
 import path from "node:path";
 import type { AssetType, OhlcBar } from "../types.js";
 import {
+  PRICE_DATABASE_FOLDER,
   isServerlessCwd,
-  readDurableText,
+  readBlobPath,
+  readJsonFile,
   serverlessTmpDir,
-  writeDurableText,
+  writeBlobPath,
+  writeJsonFile,
 } from "./durableStore.js";
 import type { PriceSource } from "./priceProviders.js";
 
@@ -30,14 +33,20 @@ export function priceCacheDir(): string {
   return seedCacheDir();
 }
 
-function fileFor(dir: string, symbol: string): string {
-  const safe = symbol.replace(/[^A-Z0-9-]/g, "_");
-  return path.join(dir, `${safe}.json`);
+function safeSymbol(symbol: string): string {
+  return symbol.replace(/[^A-Z0-9-]/g, "_");
 }
 
-function blobKey(symbol: string): string {
-  const safe = symbol.replace(/[^A-Z0-9-]/g, "_");
-  return `prices/${safe}.json`;
+function fileFor(dir: string, symbol: string): string {
+  return path.join(dir, `${safeSymbol(symbol)}.json`);
+}
+
+export function priceDatabaseBlobPath(symbol: string): string {
+  return `${PRICE_DATABASE_FOLDER}/${safeSymbol(symbol)}.json`;
+}
+
+function legacyPriceBlobPath(symbol: string): string {
+  return `apestock/prices/${safeSymbol(symbol)}.json`;
 }
 
 export function mergeBars(...series: OhlcBar[][]): OhlcBar[] {
@@ -67,29 +76,66 @@ function parseStored(raw: string): StoredPrices | null {
   }
 }
 
-export async function readStoredPrices(symbol: string): Promise<StoredPrices | null> {
-  const hit = memory.get(symbol);
-  if (hit) {
-    return cloneEntry(hit);
-  }
+export function combineStored(entries: Array<StoredPrices | null | undefined>): StoredPrices | null {
+  const present = entries.filter((entry): entry is StoredPrices => Boolean(entry && Array.isArray(entry.bars)));
+  if (present.length === 0) return null;
+  const newest = present.reduce((best, entry) => (entry.updatedAt >= best.updatedAt ? entry : best));
+  return {
+    symbol: newest.symbol,
+    assetType: newest.assetType,
+    bars: mergeBars(...present.map((entry) => entry.bars)),
+    updatedAt: newest.updatedAt,
+    source: newest.source,
+  };
+}
 
+async function readLocalPrices(symbol: string): Promise<StoredPrices | null> {
   const writeDir = priceCacheDir();
   const seedDir = seedCacheDir();
-  const localPaths = [fileFor(writeDir, symbol)];
+  const paths = [fileFor(writeDir, symbol)];
   if (path.resolve(seedDir) !== path.resolve(writeDir)) {
-    localPaths.push(fileFor(seedDir, symbol));
+    paths.push(fileFor(seedDir, symbol));
   }
+  for (const filePath of paths) {
+    const raw = await readJsonFile(filePath);
+    if (!raw) continue;
+    const parsed = parseStored(raw);
+    if (parsed) return parsed;
+  }
+  return null;
+}
 
-  const raw = await readDurableText(blobKey(symbol), localPaths);
-  if (!raw) return null;
-  const parsed = parseStored(raw);
-  if (!parsed) return null;
-  memory.set(symbol, parsed);
-  return cloneEntry(parsed);
+async function readBlobPrices(symbol: string): Promise<StoredPrices | null> {
+  const primary = await readBlobPath(priceDatabaseBlobPath(symbol));
+  const parsedPrimary = primary ? parseStored(primary) : null;
+  if (parsedPrimary) return parsedPrimary;
+  const legacy = await readBlobPath(legacyPriceBlobPath(symbol));
+  return legacy ? parseStored(legacy) : null;
+}
+
+export async function readStoredPrices(symbol: string): Promise<StoredPrices | null> {
+  const fromMemory = memory.get(symbol) ?? null;
+  const fromDisk = await readLocalPrices(symbol);
+  const fromBlob = await readBlobPrices(symbol);
+  const combined = combineStored([fromBlob, fromDisk, fromMemory]);
+  if (!combined) return null;
+  memory.set(symbol, combined);
+  return cloneEntry(combined);
 }
 
 export async function writeStoredPrices(entry: StoredPrices): Promise<void> {
-  const copy = cloneEntry(entry);
+  const previous = memory.get(entry.symbol) ?? null;
+  const copy = combineStored([previous, entry]) ?? cloneEntry(entry);
   memory.set(entry.symbol, copy);
-  await writeDurableText(blobKey(entry.symbol), fileFor(priceCacheDir(), entry.symbol), JSON.stringify(copy));
+  const body = JSON.stringify(copy);
+  try {
+    await writeJsonFile(fileFor(priceCacheDir(), entry.symbol), body);
+  } catch {
+    // Serverless bundles are read-only.
+  }
+  try {
+    await writeBlobPath(priceDatabaseBlobPath(entry.symbol), body);
+  } catch {
+    // Blob is optional; a missing store must not fail a backtest.
+  }
 }

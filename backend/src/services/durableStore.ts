@@ -4,6 +4,9 @@ import path from "node:path";
 
 const BLOB_PREFIX = "apestock/";
 
+/** Shared EOD folder in the Vercel Blob store (visible as a directory in the dashboard). */
+export const PRICE_DATABASE_FOLDER = "price-database";
+
 export function isServerlessCwd(cwd = process.cwd()): boolean {
   return Boolean(
     process.env.VERCEL ||
@@ -15,18 +18,22 @@ export function isServerlessCwd(cwd = process.cwd()): boolean {
 }
 
 export function blobStoreEnabled(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      process.env.BLOB_STORE_ID ||
+      (process.env.VERCEL && process.env.VERCEL_OIDC_TOKEN),
+  );
 }
 
-function blobPath(key: string): string {
+function namespacedBlobPath(key: string): string {
   return `${BLOB_PREFIX}${key.replace(/^\/+/, "")}`;
 }
 
-async function readBlobText(key: string): Promise<string | null> {
+export async function readBlobPath(pathname: string): Promise<string | null> {
   if (!blobStoreEnabled()) return null;
   try {
     const { get } = await import("@vercel/blob");
-    const result = await get(blobPath(key), { access: "private", useCache: false });
+    const result = await get(pathname, { access: "private", useCache: false });
     if (!result || result.statusCode !== 200 || !result.stream) return null;
     return await new Response(result.stream).text();
   } catch {
@@ -34,16 +41,24 @@ async function readBlobText(key: string): Promise<string | null> {
   }
 }
 
-async function writeBlobText(key: string, body: string): Promise<void> {
+export async function writeBlobPath(pathname: string, body: string): Promise<void> {
   if (!blobStoreEnabled()) return;
   const { put } = await import("@vercel/blob");
-  await put(blobPath(key), body, {
+  await put(pathname, body, {
     access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
-    cacheControlMaxAge: 60 * 60,
+    cacheControlMaxAge: 60,
   });
+}
+
+async function readBlobText(key: string): Promise<string | null> {
+  return readBlobPath(namespacedBlobPath(key));
+}
+
+async function writeBlobText(key: string, body: string): Promise<void> {
+  await writeBlobPath(namespacedBlobPath(key), body);
 }
 
 export async function readJsonFile(filePath: string): Promise<string | null> {

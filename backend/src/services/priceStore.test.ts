@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mergeBars, readStoredPrices, writeStoredPrices } from "./priceStore.js";
+import { PRICE_DATABASE_FOLDER } from "./durableStore.js";
+import {
+  combineStored,
+  mergeBars,
+  priceDatabaseBlobPath,
+  readStoredPrices,
+  writeStoredPrices,
+} from "./priceStore.js";
 
 test("writeStoredPrices keeps bars in memory when the disk path is not writable", async () => {
   const previous = process.env.PRICE_CACHE_DIR;
@@ -34,5 +41,37 @@ test("mergeBars overwrites the same date and keeps order", () => {
       ["2026-01-01", 1],
       ["2026-01-02", 2],
     ],
+  );
+});
+
+test("price database files live in a dedicated Blob folder", () => {
+  assert.equal(priceDatabaseBlobPath("AAPL"), `${PRICE_DATABASE_FOLDER}/AAPL.json`);
+  assert.equal(priceDatabaseBlobPath("BRK-B"), `${PRICE_DATABASE_FOLDER}/BRK-B.json`);
+});
+
+test("combineStored unions bars from the shared database and a later download", () => {
+  const combined = combineStored([
+    {
+      symbol: "AAPL",
+      assetType: "STOCK",
+      updatedAt: "2026-11-10T00:00:00.000Z",
+      source: "yahoo",
+      bars: [
+        { date: "2024-01-02", open: 1, high: 1, low: 1, close: 1 },
+        { date: "2024-01-03", open: 1, high: 1, low: 1, close: 1 },
+      ],
+    },
+    {
+      symbol: "AAPL",
+      assetType: "STOCK",
+      updatedAt: "2026-11-14T00:00:00.000Z",
+      source: "stooq",
+      bars: [{ date: "2024-01-04", open: 2, high: 2, low: 2, close: 2 }],
+    },
+  ]);
+  assert.equal(combined?.source, "stooq");
+  assert.deepEqual(
+    combined?.bars.map((bar) => bar.date),
+    ["2024-01-02", "2024-01-03", "2024-01-04"],
   );
 });

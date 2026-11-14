@@ -12,6 +12,12 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Added
+
+- Shared Vercel Blob folder `price-database/{SYMBOL}.json`: every backtest reads
+  it first and writes missing daily bars back, so later runs skip Yahoo when
+  the window is already stored
+
 ### Changed
 
 - Mobile and desktop UI follows a denser dashboard layout: Setup/Results panes on
