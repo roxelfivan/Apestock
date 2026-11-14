@@ -1,5 +1,6 @@
+import { useMemo, useState } from "react";
 import { formatNumber, formatPct, toneFor } from "../lib/format";
-import type { CommitteeMember, CommitteeResult, CommitteeVote } from "../types";
+import type { CommitteeMember, CommitteeResult, CommitteeVote, StrategyName, StrategyParams } from "../types";
 
 const VOTE_LABEL: Record<CommitteeVote, string> = {
   BUY: "Buy",
@@ -29,18 +30,37 @@ function voteOrder(vote: CommitteeVote): number {
   return 2;
 }
 
+type SortKey = "vote" | "return" | "sharpe" | "trades";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  vote: "Vote",
+  return: "Return",
+  sharpe: "Sharpe",
+  trades: "Trades",
+};
+
 interface CommitteeBoxProps {
   committee: CommitteeResult;
+  onSelect?: (strategy: StrategyName, params: StrategyParams) => void;
+  busy?: boolean;
 }
 
-export default function CommitteeBox({ committee }: CommitteeBoxProps) {
-  const members = [...committee.members].sort((a, b) => {
-    const ready = Number(b.ready) - Number(a.ready);
-    if (ready !== 0) return ready;
-    const vote = voteOrder(a.vote) - voteOrder(b.vote);
-    if (vote !== 0) return vote;
-    return b.sharpe - a.sharpe;
-  });
+export default function CommitteeBox({ committee, onSelect, busy = false }: CommitteeBoxProps) {
+  const [sort, setSort] = useState<SortKey>("vote");
+
+  const members = useMemo(() => {
+    const sorted = [...committee.members].sort((a, b) => {
+      if (sort === "return") return b.totalReturn - a.totalReturn;
+      if (sort === "sharpe") return b.sharpe - a.sharpe;
+      if (sort === "trades") return b.totalTrades - a.totalTrades;
+      const ready = Number(b.ready) - Number(a.ready);
+      if (ready !== 0) return ready;
+      const vote = voteOrder(a.vote) - voteOrder(b.vote);
+      if (vote !== 0) return vote;
+      return b.sharpe - a.sharpe;
+    });
+    return sorted;
+  }, [committee.members, sort]);
 
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -55,6 +75,28 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 p-0.5"
+            role="group"
+            aria-label="Sort indicator cards"
+          >
+            <span className="px-1.5 text-[10px] uppercase tracking-[0.14em] text-slate-500">Sort</span>
+            {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSort(key)}
+                aria-pressed={sort === key}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  sort === key
+                    ? "bg-emerald-400/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {SORT_LABELS[key]}
+              </button>
+            ))}
+          </div>
           <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${voteClass(committee.majority)}`}>
             Majority {VOTE_LABEL[committee.majority]}
           </span>
@@ -80,19 +122,33 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
       </div>
 
       <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {members.map((member) => (
+        {members.map((member, index) => (
           <article
             key={member.strategy}
-            className={`min-w-0 rounded-xl border p-3 ${
-              member.selected ? "border-emerald-400/40 bg-slate-950/80" : "border-slate-800 bg-slate-950/40"
+            className={`group relative min-w-0 rounded-xl border p-3 transition-colors ${
+              member.selected
+                ? "border-emerald-400/50 bg-slate-950/80 ring-1 ring-emerald-400/30"
+                : "border-slate-800 bg-slate-950/40 hover:border-slate-600 hover:bg-slate-950/70"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">
+                <button
+                  type="button"
+                  onClick={() => onSelect?.(member.strategy, member.params)}
+                  disabled={!onSelect || busy}
+                  aria-pressed={member.selected}
+                  title={`Show every chart for ${member.label}`}
+                  className="block max-w-full truncate text-left text-sm font-medium text-white outline-none after:absolute after:inset-0 after:content-[''] hover:text-emerald-300 focus-visible:rounded focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-default disabled:hover:text-white"
+                >
+                  <span className="mr-1.5 text-[10px] font-normal tabular-nums text-slate-600">
+                    {index + 1}
+                  </span>
                   {member.label}
-                  {member.selected ? <span className="ml-2 text-[10px] font-normal text-emerald-400">this run</span> : null}
-                </p>
+                  {member.selected ? (
+                    <span className="ml-2 text-[10px] font-normal text-emerald-400">this run</span>
+                  ) : null}
+                </button>
                 <p className="mt-0.5 truncate text-[10px] text-slate-500">{lastValueSummary(member)}</p>
               </div>
               <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${voteClass(member.vote, member.ready)}`}>
@@ -126,6 +182,9 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
                 <dd>{member.totalTrades}</dd>
               </div>
             </dl>
+            <p className="mt-2 text-[10px] text-slate-600 transition-colors group-hover:text-slate-400">
+              {member.selected ? "Every chart below uses this strategy" : "Click to load this strategy"}
+            </p>
           </article>
         ))}
       </div>

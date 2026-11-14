@@ -1,6 +1,6 @@
 {
   "name": "apestock",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "workspaces": ["backend", "frontend"],
   "engines": {
@@ -8,7 +8,13 @@
   },
   "scripts": {
     "build": "npm run build -w frontend",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w apestock-backend\" \"npm run dev -w frontend\"",
+    "dev:backend": "npm run dev -w apestock-backend",
+    "dev:frontend": "npm run dev -w frontend",
     "typecheck": "npm run typecheck -w apestock-backend && npm run typecheck -w frontend",
     "test": "npm run test -w apestock-backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import packageJson from "../package.json";
 import AssetSelector from "./components/AssetSelector";
 import CommitteeBox from "./components/CommitteeBox";
@@ -24,6 +24,7 @@ import type {
   SavedRun,
   SizingMode,
   StrategyName,
+  StrategyParams,
   SweepResult,
   Timeframe,
   PriceSyncResult,
@@ -71,6 +72,7 @@ export default function App() {
   const [universeLoading, setUniverseLoading] = useState(() => !readStoredUniverse());
   const [universeError, setUniverseError] = useState("");
   const [priceSync, setPriceSync] = useState<PriceSyncResult | null>(null);
+  const runIdRef = useRef(0);
 
   const tickerValid = useMemo(
     () => allowAnySymbol || isValidTicker(ticker, assetType, universe),
@@ -181,6 +183,28 @@ export default function App() {
     }
   }
 
+  async function executeBacktest(nextConfig: BacktestConfig): Promise<void> {
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    setLoading(true);
+    setError("");
+    try {
+      await refreshPrices();
+      const payload = await runBacktest(nextConfig);
+      // A newer request already landed: drop this response so the charts match the latest click.
+      if (runIdRef.current !== runId) return;
+      setResult(payload);
+      setStale(false);
+      setRuns(saveRun(nextConfig, payload));
+    } catch (err) {
+      if (runIdRef.current !== runId) return;
+      setResult(null);
+      setError(sanitizeUserError(err, "Unable to run backtest."));
+    } finally {
+      if (runIdRef.current === runId) setLoading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!tickerValid) {
@@ -192,20 +216,17 @@ export default function App() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    try {
-      await refreshPrices();
-      const payload = await runBacktest(config);
-      setResult(payload);
-      setStale(false);
-      setRuns(saveRun(config, payload));
-    } catch (err) {
-      setResult(null);
-      setError(sanitizeUserError(err, "Unable to run backtest."));
-    } finally {
-      setLoading(false);
-    }
+    await executeBacktest(config);
+  }
+
+  function handleCommitteeSelect(nextStrategy: StrategyName, nextParams: StrategyParams) {
+    const resolvedParams =
+      nextStrategy === strategy ? params : nextParams ?? DEFAULT_PARAMS[nextStrategy];
+    setStrategy(nextStrategy);
+    setParams(resolvedParams);
+    setSweep(null);
+    setWalkForward(null);
+    void executeBacktest({ ...config, strategy: nextStrategy, params: resolvedParams });
   }
 
   async function handleSweep() {
@@ -387,7 +408,7 @@ export default function App() {
             <MetricsDashboard result={result} compare={compare} loading={loading} stale={stale} />
             {result?.committee?.members.length ? (
               <div className={loading || stale ? "opacity-60" : ""}>
-                <CommitteeBox committee={result.committee} />
+                <CommitteeBox committee={result.committee} onSelect={handleCommitteeSelect} busy={loading} />
               </div>
             ) : null}
             {result ? <PriceChart result={result} /> : null}
