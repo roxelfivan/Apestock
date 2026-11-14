@@ -68,7 +68,7 @@ export default function CommitteeBox({ committee, onSelect, busy = false }: Comm
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Committee</p>
           <h3 className="text-sm font-semibold text-white">Indicator votes</h3>
-          <p className="mt-1 max-w-2xl text-[11px] text-slate-500">
+          <p className="mt-1 max-w-2xl text-xs text-slate-500">
             Each vote is the indicator’s current zone: buy or sell only at an extreme or established trend, hold in
             the middle. That is not a fill. Last buy/sell is the last crossover used by the backtest.{" "}
             {committee.asOf ? `As of ${committee.asOf}.` : ""}
@@ -76,7 +76,7 @@ export default function CommitteeBox({ committee, onSelect, busy = false }: Comm
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 p-0.5"
+            className="flex flex-wrap items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 p-0.5"
             role="group"
             aria-label="Sort indicator cards"
           >
@@ -87,7 +87,7 @@ export default function CommitteeBox({ committee, onSelect, busy = false }: Comm
                 type="button"
                 onClick={() => setSort(key)}
                 aria-pressed={sort === key}
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                className={`min-h-9 rounded-full px-2.5 text-xs font-medium transition-colors ${
                   sort === key
                     ? "bg-emerald-400/20 text-emerald-300 ring-1 ring-emerald-400/40"
                     : "text-slate-400 hover:text-slate-200"
@@ -97,7 +97,7 @@ export default function CommitteeBox({ committee, onSelect, busy = false }: Comm
               </button>
             ))}
           </div>
-          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${voteClass(committee.majority)}`}>
+          <span className={`inline-flex min-h-9 items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${voteClass(committee.majority)}`}>
             Majority {VOTE_LABEL[committee.majority]}
           </span>
           <span className={`rounded-full border px-2.5 py-1 text-xs ${voteClass(committee.weighted)}`}>
@@ -183,7 +183,7 @@ export default function CommitteeBox({ committee, onSelect, busy = false }: Comm
               </div>
             </dl>
             <p className="mt-2 text-[10px] text-slate-600 transition-colors group-hover:text-slate-400">
-              {member.selected ? "Every chart below uses this strategy" : "Click to load this strategy"}
+              {member.selected ? "Every chart uses this strategy" : "Click to load this strategy"}
             </p>
           </article>
         ))}

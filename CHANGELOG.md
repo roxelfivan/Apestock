@@ -12,6 +12,13 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Changed
+
+- Mobile and desktop UI follows a denser dashboard layout: Setup/Results panes on
+  small screens, a sticky run bar, larger tap targets, optional costs/research
+  folded away, extra metrics behind a disclosure, charts before the committee,
+  and a card blotter on phones
+
 ## [0.0.4] - 2026-11-14
 
 Click any indicator to drive every chart, rank the committee by performance,

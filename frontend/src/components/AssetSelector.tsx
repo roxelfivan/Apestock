@@ -159,36 +159,36 @@ export default function AssetSelector({
   let optionCursor = 0;
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/20">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Universe</p>
-          <h2 className="mt-1 text-lg font-semibold text-white">Asset selector</h2>
-        </div>
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-xl shadow-black/20 sm:p-5">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Universe</p>
+        <h2 className="mt-1 text-lg font-semibold text-white">Asset</h2>
       </div>
 
-      <div className="grid min-w-0 grid-cols-2 gap-1 rounded-xl bg-slate-950 p-1 ring-1 ring-slate-800">
+      <div className="grid min-w-0 grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1 ring-1 ring-slate-800">
         <button
           type="button"
           onClick={() => onAssetTypeChange("STOCK")}
-          className={`min-w-0 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
+          aria-pressed={assetType === "STOCK"}
+          className={`min-h-11 min-w-0 rounded-lg px-2 text-sm font-semibold transition duration-200 sm:px-3 ${
             assetType === "STOCK"
               ? "bg-slate-100 text-slate-950 shadow"
               : "text-slate-400 hover:text-white"
           }`}
         >
-          US STOCKS
+          US stocks
         </button>
         <button
           type="button"
           onClick={() => onAssetTypeChange("CRYPTO")}
-          className={`min-w-0 rounded-lg px-2 py-2 text-sm font-semibold transition sm:px-3 ${
+          aria-pressed={assetType === "CRYPTO"}
+          className={`min-h-11 min-w-0 rounded-lg px-2 text-sm font-semibold transition duration-200 sm:px-3 ${
             assetType === "CRYPTO"
               ? "bg-slate-100 text-slate-950 shadow"
               : "text-slate-400 hover:text-white"
           }`}
         >
-          CRYPTO
+          Crypto
         </button>
       </div>
 
@@ -212,7 +212,7 @@ export default function AssetSelector({
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={assetType === "CRYPTO" ? "BTC-USD" : "AAPL"}
-          className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-3 pr-10 text-sm text-white outline-none ring-emerald-400/0 transition placeholder:text-slate-600 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+          className="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-3 pr-12 text-base text-white outline-none ring-emerald-400/0 transition duration-200 placeholder:text-slate-600 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20 sm:text-sm"
           autoComplete="off"
           spellCheck="false"
         />
@@ -221,7 +221,7 @@ export default function AssetSelector({
           tabIndex={-1}
           aria-label={open ? "Hide ticker list" : "Show ticker list"}
           onClick={() => setOpen((current) => !current)}
-          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-white"
+          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-white"
         >
           <svg
             viewBox="0 0 20 20"
@@ -274,7 +274,7 @@ export default function AssetSelector({
                             event.preventDefault();
                             selectSymbol(symbol);
                           }}
-                          className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-sm ${
+                          className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${
                             active ? "bg-emerald-400/10 text-emerald-200" : "text-slate-200"
                           }`}
                         >
@@ -292,14 +292,14 @@ export default function AssetSelector({
           </ul>
         ) : null}
       </div>
-      <label className="mt-3 flex items-center gap-2 text-xs text-slate-400">
+      <label className="mt-3 flex min-h-11 items-center gap-3 text-sm text-slate-300">
         <input
           type="checkbox"
           checked={allowAnySymbol}
           onChange={(event) => onAllowAnySymbolChange(event.target.checked)}
-          className="rounded border-slate-600 bg-slate-950 text-emerald-400"
+          className="h-4 w-4 rounded border-slate-600 bg-slate-950 text-emerald-400"
         />
-        Allow any symbol (not just the curated list)
+        Allow any symbol
       </label>
       <p className={`mt-2 text-xs ${valid ? "text-slate-500" : "text-rose-400"}`}>
         {universeLoading && symbols.length === 0
