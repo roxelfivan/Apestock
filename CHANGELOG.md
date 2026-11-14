@@ -12,6 +12,10 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-11-14
+
+Shared Vercel price database, history Load uploads, and a denser phone/desktop UI.
+
 ### Added
 
 - Shared Vercel Blob folder `price-database/{SYMBOL}.json`: every backtest reads
@@ -133,7 +137,8 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.5
 [0.0.4]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.4
 [0.0.3]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.3
 [0.0.2]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.2
