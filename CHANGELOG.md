@@ -12,6 +12,12 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Changed
+
+- Backtests resolve daily bars in order: Vercel Blob `price-database/`, then local
+  `data/prices/`, then Yahoo and the other free feeds. A covering Blob object
+  skips both the local files and the download.
+
 ## [0.0.5] - 2026-11-14
 
 Shared Vercel price database, history Load uploads, and a denser phone/desktop UI.

@@ -17,9 +17,16 @@ export function isServerlessCwd(cwd = process.cwd()): boolean {
   );
 }
 
+/** Directory that stands in for Vercel Blob (tests and local runs without a token). */
+function blobDirOverride(): string | null {
+  const dir = process.env.PRICE_BLOB_DIR?.trim();
+  return dir ? dir : null;
+}
+
 export function blobStoreEnabled(): boolean {
   return Boolean(
-    process.env.BLOB_READ_WRITE_TOKEN ||
+    blobDirOverride() ||
+      process.env.BLOB_READ_WRITE_TOKEN ||
       process.env.BLOB_STORE_ID ||
       (process.env.VERCEL && process.env.VERCEL_OIDC_TOKEN),
   );
@@ -30,6 +37,10 @@ function namespacedBlobPath(key: string): string {
 }
 
 export async function readBlobPath(pathname: string): Promise<string | null> {
+  const override = blobDirOverride();
+  if (override) {
+    return readJsonFile(path.join(override, pathname));
+  }
   if (!blobStoreEnabled()) return null;
   try {
     const { get } = await import("@vercel/blob");
@@ -42,6 +53,11 @@ export async function readBlobPath(pathname: string): Promise<string | null> {
 }
 
 export async function writeBlobPath(pathname: string, body: string): Promise<void> {
+  const override = blobDirOverride();
+  if (override) {
+    await writeJsonFile(path.join(override, pathname), body);
+    return;
+  }
   if (!blobStoreEnabled()) return;
   const { put } = await import("@vercel/blob");
   await put(pathname, body, {
@@ -79,11 +95,13 @@ export function serverlessTmpDir(...parts: string[]): string {
 }
 
 export async function readDurableText(key: string, localPaths: string[]): Promise<string | null> {
+  const fromBlob = await readBlobText(key);
+  if (fromBlob) return fromBlob;
   for (const filePath of localPaths) {
     const raw = await readJsonFile(filePath);
     if (raw) return raw;
   }
-  return readBlobText(key);
+  return null;
 }
 
 export async function writeDurableText(key: string, localPath: string | null, body: string): Promise<void> {

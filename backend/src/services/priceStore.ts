@@ -9,6 +9,7 @@ import {
   writeBlobPath,
   writeJsonFile,
 } from "./durableStore.js";
+import { rangeCovered } from "./ohlcParse.js";
 import type { PriceSource } from "./priceProviders.js";
 
 export interface StoredPrices {
@@ -96,7 +97,7 @@ export function combineStored(entries: Array<StoredPrices | null | undefined>): 
   };
 }
 
-async function readLocalPrices(symbol: string): Promise<StoredPrices | null> {
+export async function readLocalPrices(symbol: string): Promise<StoredPrices | null> {
   const writeDir = priceCacheDir();
   const seedDir = seedCacheDir();
   const paths = [fileFor(writeDir, symbol)];
@@ -112,7 +113,7 @@ async function readLocalPrices(symbol: string): Promise<StoredPrices | null> {
   return null;
 }
 
-async function readBlobPrices(symbol: string): Promise<StoredPrices | null> {
+export async function readBlobPrices(symbol: string): Promise<StoredPrices | null> {
   const primary = await readBlobPath(priceDatabaseBlobPath(symbol));
   const parsedPrimary = primary ? parseStored(primary) : null;
   if (parsedPrimary) return parsedPrimary;
@@ -120,18 +121,47 @@ async function readBlobPrices(symbol: string): Promise<StoredPrices | null> {
   return legacy ? parseStored(legacy) : null;
 }
 
-export async function readStoredPrices(symbol: string): Promise<StoredPrices | null> {
-  const fromMemory = memory.get(symbol) ?? null;
-  const fromDisk = await readLocalPrices(symbol);
-  const fromBlob = await readBlobPrices(symbol);
-  const combined = combineStored([fromBlob, fromDisk, fromMemory]);
-  if (!combined) return null;
-  if (barsHaveNewDates(fromBlob?.bars, combined.bars)) {
-    await writeStoredPrices(combined);
-  } else {
-    memory.set(symbol, combined);
+export function readMemoryPrices(symbol: string): StoredPrices | null {
+  const stored = memory.get(symbol);
+  return stored ? cloneEntry(stored) : null;
+}
+
+export type PriceCacheLayer = "blob" | "local" | "memory";
+
+/**
+ * Walk cache layers in order, stopping at the first that covers [startDate, endDate].
+ * Later layers are only combined in when earlier ones miss dates.
+ */
+export function firstCoveringLayer(
+  layers: Array<{ origin: PriceCacheLayer; stored: StoredPrices | null | undefined }>,
+  startDate: string,
+  endDate: string,
+): { origin: PriceCacheLayer | null; stored: StoredPrices | null; covered: boolean } {
+  let acc: StoredPrices | null = null;
+  let origin: PriceCacheLayer | null = null;
+  for (const layer of layers) {
+    if (!layer.stored) continue;
+    acc = combineStored([acc, layer.stored]);
+    origin = layer.origin;
+    if (acc && rangeCovered(acc.bars, startDate, endDate)) {
+      return { origin, stored: acc, covered: true };
+    }
   }
-  return cloneEntry(combined);
+  return { origin, stored: acc, covered: false };
+}
+
+export async function readStoredPrices(symbol: string): Promise<StoredPrices | null> {
+  const fromBlob = await readBlobPrices(symbol);
+  if (fromBlob) {
+    memory.set(symbol, fromBlob);
+    return cloneEntry(fromBlob);
+  }
+  const fromDisk = await readLocalPrices(symbol);
+  if (fromDisk) {
+    memory.set(symbol, fromDisk);
+    return cloneEntry(fromDisk);
+  }
+  return readMemoryPrices(symbol);
 }
 
 export async function mergeIntoPriceDatabase(entry: StoredPrices): Promise<{ uploaded: boolean; stored: StoredPrices }> {
