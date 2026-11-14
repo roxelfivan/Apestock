@@ -48,14 +48,14 @@ export default function CommitteeBox({ committee }: CommitteeBoxProps) {
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Committee</p>
           <h3 className="text-sm font-semibold text-white">Indicator votes</h3>
-          <p className="mt-1 max-w-2xl text-[11px] text-slate-500">
+          <p className="mt-1 max-w-2xl text-xs text-slate-500">
             Each vote is the indicator’s current zone: buy or sell only at an extreme or established trend, hold in
             the middle. That is not a fill. Last buy/sell is the last crossover used by the backtest.{" "}
             {committee.asOf ? `As of ${committee.asOf}.` : ""}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${voteClass(committee.majority)}`}>
+          <span className={`inline-flex min-h-9 items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${voteClass(committee.majority)}`}>
             Majority {VOTE_LABEL[committee.majority]}
           </span>
           <span className={`rounded-full border px-2.5 py-1 text-xs ${voteClass(committee.weighted)}`}>

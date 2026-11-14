@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { STRATEGY_GROUPS, STRATEGY_LABELS } from "../lib/defaults";
+import { btnPrimary, fieldClass } from "../ui";
 import type { SizingMode, StrategyName, StrategyParams, Timeframe } from "../types";
 
 interface StrategyFormProps {
@@ -61,13 +62,13 @@ export default function StrategyForm({
   onSizingModeChange,
   onSubmit,
 }: StrategyFormProps) {
-  const fieldClass =
-    "mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20";
+  const hasCosts = commissionBps > 0 || commissionPerShare > 0 || slippageBps > 0;
 
   return (
     <form
+      id="backtest-form"
       onSubmit={onSubmit}
-      className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl shadow-black/20"
+      className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-xl shadow-black/20 sm:p-5"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Strategy</p>
       <h2 className="mt-1 text-lg font-semibold text-white">Parameters</h2>
@@ -145,7 +146,7 @@ export default function StrategyForm({
       ) : null}
 
       {strategy === "MACD" ? (
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <NumberField
             id="fastPeriod"
             label="Fast"
@@ -328,7 +329,7 @@ export default function StrategyForm({
       ) : null}
 
       {strategy === "PPO" ? (
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <NumberField
             id="ppoFast"
             label="Fast"
@@ -623,7 +624,7 @@ export default function StrategyForm({
 
       {paramsError ? <p className="mt-3 text-xs text-rose-400">{paramsError}</p> : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <NumberField
           id="capital"
           label="Starting capital"
@@ -641,7 +642,7 @@ export default function StrategyForm({
           className={fieldClass}
           onChange={onTradePercentChange}
         />
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-slate-300" htmlFor="sizingMode">
             Sizing
           </label>
@@ -655,21 +656,31 @@ export default function StrategyForm({
             <option value="percent_of_equity">Percent of current equity</option>
           </select>
         </div>
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-slate-300" htmlFor="timeframe">
+        <div className="sm:col-span-2">
+          <p className="block text-sm font-medium text-slate-300" id="timeframe-label">
             Timeframe
-          </label>
-          <select
-            id="timeframe"
-            value={timeframe}
-            onChange={(event) => onTimeframeChange(event.target.value as Timeframe)}
-            className={fieldClass}
+          </p>
+          <div
+            role="group"
+            aria-labelledby="timeframe-label"
+            className="mt-1 grid grid-cols-4 gap-2"
           >
-            <option value="1Y">1Y</option>
-            <option value="3Y">3Y</option>
-            <option value="5Y">5Y</option>
-            <option value="CUSTOM">Custom dates</option>
-          </select>
+            {(["1Y", "3Y", "5Y", "CUSTOM"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onTimeframeChange(option)}
+                aria-pressed={timeframe === option}
+                className={`min-h-11 rounded-xl px-2 text-sm font-semibold transition duration-200 ${
+                  timeframe === option
+                    ? "bg-slate-100 text-slate-950 shadow"
+                    : "border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
+                }`}
+              >
+                {option === "CUSTOM" ? "Custom" : option}
+              </button>
+            ))}
+          </div>
         </div>
         {timeframe === "CUSTOM" ? (
           <>
@@ -701,39 +712,44 @@ export default function StrategyForm({
         ) : null}
       </div>
 
-      <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Costs (optional)</p>
-      <div className="mt-2 grid grid-cols-3 gap-3">
-        <NumberField
-          id="commissionBps"
-          label="Comm. bps"
-          min={0}
-          value={commissionBps}
-          className={fieldClass}
-          onChange={onCommissionBpsChange}
-        />
-        <NumberField
-          id="commissionPerShare"
-          label="$ / share"
-          min={0}
-          step={0.001}
-          value={commissionPerShare}
-          className={fieldClass}
-          onChange={onCommissionPerShareChange}
-        />
-        <NumberField
-          id="slippageBps"
-          label="Slip bps"
-          min={0}
-          value={slippageBps}
-          className={fieldClass}
-          onChange={onSlippageBpsChange}
-        />
-      </div>
+      <details className="mt-5 rounded-xl border border-slate-800 bg-slate-950/40 p-3" open={hasCosts || undefined}>
+        <summary className="min-h-11 cursor-pointer list-none text-sm font-medium text-slate-200 marker:content-none [&::-webkit-details-marker]:hidden">
+          Optional costs
+          <span className="ml-2 text-xs font-normal text-slate-500">commission and slippage</span>
+        </summary>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <NumberField
+            id="commissionBps"
+            label="Commission (bps)"
+            min={0}
+            value={commissionBps}
+            className={fieldClass}
+            onChange={onCommissionBpsChange}
+          />
+          <NumberField
+            id="commissionPerShare"
+            label="$ / share"
+            min={0}
+            step={0.001}
+            value={commissionPerShare}
+            className={fieldClass}
+            onChange={onCommissionPerShareChange}
+          />
+          <NumberField
+            id="slippageBps"
+            label="Slippage (bps)"
+            min={0}
+            value={slippageBps}
+            className={fieldClass}
+            onChange={onSlippageBpsChange}
+          />
+        </div>
+      </details>
 
       <button
         type="submit"
         disabled={loading || !tickerValid || !paramsValid}
-        className="mt-5 w-full rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        className={`${btnPrimary} mt-5 max-lg:hidden`}
       >
         {loading ? "Running backtest…" : "Run backtest"}
       </button>
@@ -768,6 +784,7 @@ function NumberField({
       <input
         id={id}
         type="number"
+        inputMode="decimal"
         min={min}
         max={max}
         step={step}

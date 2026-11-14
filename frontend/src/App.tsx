@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import packageJson from "../package.json";
 import AssetSelector from "./components/AssetSelector";
 import CommitteeBox from "./components/CommitteeBox";
@@ -13,7 +13,8 @@ import TradeTable from "./components/TradeTable";
 import { isValidTicker, readStoredUniverse, storeUniverse, universeFor, universeIsFresh } from "./data/universes";
 import { fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
 import { sanitizeUserError } from "./lib/errors";
-import { DEFAULT_PARAMS } from "./lib/defaults";
+import { DEFAULT_PARAMS, STRATEGY_LABELS } from "./lib/defaults";
+import { btnPrimary } from "./ui";
 import { loadRuns, saveRun } from "./lib/history";
 import { configFromSearch, searchFromConfig } from "./lib/queryState";
 import { paramsError } from "./lib/validation";
@@ -71,6 +72,8 @@ export default function App() {
   const [universeLoading, setUniverseLoading] = useState(() => !readStoredUniverse());
   const [universeError, setUniverseError] = useState("");
   const [priceSync, setPriceSync] = useState<PriceSyncResult | null>(null);
+  const [pane, setPane] = useState<"setup" | "results">("setup");
+  const errorRef = useRef<HTMLDivElement>(null);
 
   const tickerValid = useMemo(
     () => allowAnySymbol || isValidTicker(ticker, assetType, universe),
@@ -185,15 +188,20 @@ export default function App() {
     event.preventDefault();
     if (!tickerValid) {
       setError("Enter a ticker from the selected universe, or enable any-symbol search.");
+      setPane("setup");
+      queueMicrotask(() => errorRef.current?.focus());
       return;
     }
     if (formError) {
       setError(formError);
+      setPane("setup");
+      queueMicrotask(() => errorRef.current?.focus());
       return;
     }
 
     setLoading(true);
     setError("");
+    setPane("results");
     try {
       await refreshPrices();
       const payload = await runBacktest(config);
@@ -203,6 +211,8 @@ export default function App() {
     } catch (err) {
       setResult(null);
       setError(sanitizeUserError(err, "Unable to run backtest."));
+      setPane("setup");
+      queueMicrotask(() => errorRef.current?.focus());
     } finally {
       setLoading(false);
     }
@@ -253,49 +263,72 @@ export default function App() {
     setResult(run.result);
     setStale(false);
     setError("");
+    setPane("results");
   }
 
   const compare = runs.find((run) => run.id === compareId)?.result ?? null;
 
+  const canRun = tickerValid && !formError && !loading;
+
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-950">
-      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-start gap-4">
+    <div className="min-h-dvh overflow-x-hidden bg-slate-950">
+      <a
+        href="#results"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-emerald-400 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
+      >
+        Skip to results
+      </a>
+      <div className="mx-auto w-full min-w-0 max-w-7xl px-4 pb-36 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 lg:mb-8">
+          <div className="flex min-w-0 items-center gap-3">
             <a
               href="/"
               aria-label="Apestock home"
-              className="shrink-0 rounded-2xl outline-none ring-1 ring-emerald-400/25 focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="shrink-0 rounded-xl outline-none ring-1 ring-emerald-400/25 focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
               <img
                 src="/app-icon.png"
-                alt="Apestock"
-                width={56}
-                height={70}
-                className="h-14 w-auto rounded-2xl bg-slate-950"
+                alt=""
+                width={44}
+                height={55}
+                className="h-11 w-auto rounded-xl bg-slate-950"
               />
             </a>
-            <div>
+            <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">Apestock</span>
-                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-300">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Apestock</span>
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-medium tracking-wide text-emerald-300">
                   v{packageJson.version}
                 </span>
               </p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Daily backtester</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Live top-50 S&P, Nasdaq, stock/bond/other ETF, and crypto universes, or any symbol. Daily bars, 24
-                technical rules plus buy-and-hold, optional costs, and inspectable trades. Signals on the close; fills at the next open.
+              <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-white sm:text-2xl">Daily backtester</h1>
+              <p className="mt-1 hidden max-w-2xl text-sm text-slate-400 lg:block">
+                Ranked US stocks, ETFs, and crypto, or any symbol. Daily bars, technical rules plus buy-and-hold.
+                Signals on the close; fills at the next open.
               </p>
             </div>
           </div>
-          <div className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400">
+          <p className="hidden rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400 lg:block">
             long only · T+1 open · warmup before the test window
-          </div>
+          </p>
         </header>
 
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-          <div className="min-w-0 space-y-4">
+          <div className={`min-w-0 space-y-4 lg:block ${pane === "setup" ? "block" : "hidden"}`}>
+            {error ? (
+              <div
+                ref={errorRef}
+                tabIndex={-1}
+                role="alert"
+                aria-labelledby="error-title"
+                className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 outline-none break-words focus-visible:ring-2 focus-visible:ring-rose-400"
+              >
+                <p id="error-title" className="font-semibold text-rose-200">
+                  There is a problem
+                </p>
+                <p className="mt-1">{error}</p>
+              </div>
+            ) : null}
             <AssetSelector
               assetType={assetType}
               ticker={ticker}
@@ -377,25 +410,67 @@ export default function App() {
               onSweep={handleSweep}
               onWalkForward={handleWalkForward}
             />
-            {error ? (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 break-words">
-                {error}
-              </div>
-            ) : null}
           </div>
-          <div className="min-w-0 space-y-4">
-            <MetricsDashboard result={result} compare={compare} loading={loading} stale={stale} />
+          <div
+            id="results"
+            className={`min-w-0 space-y-4 scroll-mt-4 lg:block ${pane === "results" ? "block" : "hidden"}`}
+          >
+            <MetricsDashboard
+              result={result}
+              compare={compare}
+              loading={loading}
+              stale={stale}
+              onGoToSetup={() => setPane("setup")}
+            />
+            {result ? <PriceChart result={result} /> : null}
+            {result ? <DrawdownChart result={result} /> : null}
+            {result ? <MonthlyGrid result={result} /> : null}
             {result?.committee?.members.length ? (
               <div className={loading || stale ? "opacity-60" : ""}>
                 <CommitteeBox committee={result.committee} />
               </div>
             ) : null}
-            {result ? <PriceChart result={result} /> : null}
-            {result ? <DrawdownChart result={result} /> : null}
-            {result ? <MonthlyGrid result={result} /> : null}
             {result ? <TradeTable result={result} /> : null}
             <RunHistory runs={runs} compareId={compareId} onCompare={setCompareId} onRestore={restoreRun} />
           </div>
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950/95 backdrop-blur lg:hidden">
+        <div className="px-4 pt-2" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          {pane === "setup" ? (
+            <button type="submit" form="backtest-form" disabled={!canRun} className={`${btnPrimary} mb-2`}>
+              {loading ? "Running backtest…" : `Run ${ticker.trim().toUpperCase() || "backtest"}`}
+            </button>
+          ) : (
+            <p className="mb-2 truncate text-center text-xs text-slate-400">
+              {result
+                ? `${result.ticker} · ${result.strategy ? STRATEGY_LABELS[result.strategy] : "strategy"} · ${result.timeframe}`
+                : "Set a ticker and rule, then run a backtest"}
+            </p>
+          )}
+          <nav aria-label="App sections" className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setPane("setup")}
+              aria-current={pane === "setup" ? "page" : undefined}
+              className={`min-h-11 rounded-xl text-sm font-semibold transition duration-200 ${
+                pane === "setup" ? "bg-slate-100 text-slate-950" : "border border-slate-700 text-slate-300"
+              }`}
+            >
+              Setup
+            </button>
+            <button
+              type="button"
+              onClick={() => setPane("results")}
+              aria-current={pane === "results" ? "page" : undefined}
+              className={`min-h-11 rounded-xl text-sm font-semibold transition duration-200 ${
+                pane === "results" ? "bg-slate-100 text-slate-950" : "border border-slate-700 text-slate-300"
+              }`}
+            >
+              Results
+            </button>
+          </nav>
         </div>
       </div>
     </div>

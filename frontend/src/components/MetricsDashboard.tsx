@@ -11,6 +11,7 @@ import {
 import { exportBacktestCsv } from "../lib/csv";
 import { formatMoney, formatNumber, formatPct, toneFor } from "../lib/format";
 import { STRATEGY_LABELS } from "../lib/defaults";
+import { btnPrimary, btnSecondary } from "../ui";
 import type { BacktestResult, TradeEvent } from "../types";
 
 const MIN_ZOOM_SPAN = 20;
@@ -95,7 +96,7 @@ function MetricCard({ label, value, tone = "neutral" }: MetricCardProps) {
     tone === "positive" ? "text-emerald-400" : tone === "negative" ? "text-rose-400" : "text-white";
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className={`mt-1.5 text-lg font-semibold break-words ${toneClass}`}>{value}</p>
     </div>
   );
@@ -116,9 +117,10 @@ interface MetricsDashboardProps {
   compare: BacktestResult | null;
   loading: boolean;
   stale: boolean;
+  onGoToSetup?: () => void;
 }
 
-export default function MetricsDashboard({ result, compare, loading, stale }: MetricsDashboardProps) {
+export default function MetricsDashboard({ result, compare, loading, stale, onGoToSetup }: MetricsDashboardProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const rangeRef = useRef({ start: 0, end: 0 });
   const pinchRef = useRef<{ distance: number; start: number; end: number } | null>(null);
@@ -254,14 +256,19 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
 
   if (!result) {
     return (
-      <section className="flex min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
+      <section className="flex min-h-64 items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-6 text-center sm:min-h-80">
         <div>
-          <p className="text-sm font-medium text-slate-300">{loading ? "Running backtest…" : "No backtest yet"}</p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-base font-medium text-slate-200">{loading ? "Running backtest…" : "No backtest yet"}</p>
+          <p className="mt-2 max-w-sm text-sm text-slate-400">
             {loading
-              ? "Fetching Yahoo daily bars and simulating fills."
-              : "Choose a ticker, set a rule, then run a daily EOD simulation."}
+              ? "Fetching daily bars and simulating fills."
+              : "Pick a ticker and a rule, then run. Results open here: return, equity, and trades."}
           </p>
+          {onGoToSetup && !loading ? (
+            <button type="button" onClick={onGoToSetup} className={`${btnPrimary} mt-4 lg:hidden`}>
+              Go to setup
+            </button>
+          ) : null}
         </div>
       </section>
     );
@@ -289,11 +296,7 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
               <p className="text-[11px] text-amber-300">{result.missingSessions} missing sessions in the window</p>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => exportBacktestCsv(result)}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-200"
-          >
+          <button type="button" onClick={() => exportBacktestCsv(result)} className={`${btnSecondary} shrink-0 px-3 text-xs`}>
             Export CSV
           </button>
         </div>
@@ -315,8 +318,14 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
           tone={winRate >= 50 ? "positive" : "negative"}
         />
         <MetricCard label="Total trades" value={String(totalTrades)} />
-        {metrics ? (
-          <>
+      </div>
+      {metrics ? (
+        <details className="rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+          <summary className="min-h-11 cursor-pointer list-none text-sm font-medium text-slate-200 marker:content-none [&::-webkit-details-marker]:hidden">
+            More metrics
+            <span className="ml-2 text-xs font-normal text-slate-500">CAGR, Sharpe, hold time, and the rest</span>
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
             <MetricCard label="CAGR" value={formatPct(metrics.cagr)} tone={toneFor(metrics.cagr)} />
             <MetricCard label="Sharpe" value={formatNumber(metrics.sharpe, 2)} tone={toneFor(metrics.sharpe)} />
             <MetricCard label="Sortino" value={formatNumber(metrics.sortino, 2)} tone={toneFor(metrics.sortino)} />
@@ -329,9 +338,9 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
             <MetricCard label="Avg hold" value={`${formatNumber(metrics.avgHoldDays, 1)}d`} />
             <MetricCard label="Vol" value={formatPct(metrics.volatility)} />
             <MetricCard label="Max loss streak" value={String(metrics.maxConsecutiveLosses)} />
-          </>
-        ) : null}
-      </div>
+          </div>
+        </details>
+      ) : null}
 
       <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -339,7 +348,7 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Equity</p>
             <h3 className="text-sm font-semibold text-white">Strategy vs buy & hold</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-4 rounded bg-blue-500" /> Portfolio
             </span>
@@ -357,22 +366,28 @@ export default function MetricsDashboard({ result, compare, loading, stale }: Me
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-0 border-x-[3.5px] border-x-transparent border-t-[6px] border-t-rose-500" /> Sell
             </span>
-            {isZoomed ? (
+            <span className="hidden sm:inline">{isZoomed ? "Zoomed" : "Scroll, pinch, or use the buttons"}</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => applyZoom(0.82, 0.5)} className={`${btnSecondary} min-h-9 px-3 text-xs`}>
+                Zoom in
+              </button>
+              <button type="button" onClick={() => applyZoom(1.18, 0.5)} className={`${btnSecondary} min-h-9 px-3 text-xs`}>
+                Zoom out
+              </button>
               <button
                 type="button"
                 onClick={resetZoom}
-                className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300"
+                disabled={!isZoomed}
+                className={`${btnSecondary} min-h-9 px-3 text-xs`}
               >
-                Reset zoom
+                Reset
               </button>
-            ) : (
-              <span>Scroll or pinch to zoom</span>
-            )}
+            </div>
           </div>
         </div>
         <div
           ref={chartRef}
-          className="relative h-[360px] w-full min-w-0 overflow-hidden touch-none"
+          className="relative h-56 w-full min-w-0 overflow-hidden touch-none sm:h-72 lg:h-[360px]"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}

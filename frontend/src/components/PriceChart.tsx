@@ -64,7 +64,7 @@ export default function PriceChart({ result }: PriceChartProps) {
     <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Price</p>
       <h3 className="text-sm font-semibold text-white">Close with indicators and fills</h3>
-      <ChartViewport height={260} className="mt-3">
+      <ChartViewport height={240} className="mt-3">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
             <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />

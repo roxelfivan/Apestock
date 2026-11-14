@@ -12,6 +12,13 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Changed
+
+- Mobile and desktop UI follows a denser dashboard layout: Setup/Results panes on
+  small screens, a sticky run bar, larger tap targets, optional costs/research
+  folded away, extra metrics behind a disclosure, charts before the committee,
+  and a card blotter on phones
+
 ### Removed
 
 - Unused parallel price-feed module (`backend/src/services/feeds`) left over from the
