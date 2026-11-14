@@ -267,6 +267,19 @@ export default function App() {
 
   function restoreRun(run: SavedRun) {
     const next = run.config;
+    void syncPrices(
+      next.ticker,
+      next.assetType,
+      (run.result.bars ?? []).map((bar) => ({
+        date: bar.date,
+        open: bar.open,
+        high: bar.high,
+        low: bar.low,
+        close: bar.close,
+      })),
+    )
+      .then(setPriceSync)
+      .catch(() => undefined);
     setAssetType(next.assetType);
     setTicker(next.ticker);
     setStrategy(next.strategy);

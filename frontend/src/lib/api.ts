@@ -60,11 +60,15 @@ export function runWalkForward(config: BacktestConfig): Promise<WalkForwardResul
   return postJson("/api/backtest/walk-forward", config);
 }
 
-export async function syncPrices(ticker: string, assetType: BacktestConfig["assetType"]): Promise<PriceSyncResult> {
+export async function syncPrices(
+  ticker: string,
+  assetType: BacktestConfig["assetType"],
+  bars?: Array<{ date: string; open: number; high: number; low: number; close: number }>,
+): Promise<PriceSyncResult> {
   const response = await fetch("/api/prices/sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), assetType }),
+    body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), assetType, bars }),
   });
   const payload = (await response.json()) as PriceSyncResult & ApiError;
   if (!response.ok) {

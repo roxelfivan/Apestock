@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PRICE_DATABASE_FOLDER } from "./durableStore.js";
 import {
+  barsHaveNewDates,
   combineStored,
   mergeBars,
   priceDatabaseBlobPath,
@@ -74,4 +75,17 @@ test("combineStored unions bars from the shared database and a later download", 
     combined?.bars.map((bar) => bar.date),
     ["2024-01-02", "2024-01-03", "2024-01-04"],
   );
+});
+
+test("barsHaveNewDates is true only when the database is missing a session", () => {
+  const stored = [
+    { date: "2024-01-02", open: 1, high: 1, low: 1, close: 1 },
+    { date: "2024-01-03", open: 1, high: 1, low: 1, close: 1 },
+  ];
+  assert.equal(barsHaveNewDates(stored, stored), false);
+  assert.equal(
+    barsHaveNewDates(stored, [{ date: "2024-01-04", open: 1, high: 1, low: 1, close: 1 }]),
+    true,
+  );
+  assert.equal(barsHaveNewDates([], [{ date: "2024-01-02", open: 1, high: 1, low: 1, close: 1 }]), true);
 });

@@ -327,7 +327,9 @@ export default function AssetSelector({
                         ? "Kraken"
                         : "Yahoo"
               })`
-            : " (price database)"}
+            : priceSync.uploaded
+              ? " (merged into price database)"
+              : " (price database)"}
           .
         </p>
       ) : null}

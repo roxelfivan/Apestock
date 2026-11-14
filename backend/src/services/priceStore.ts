@@ -76,6 +76,13 @@ function parseStored(raw: string): StoredPrices | null {
   }
 }
 
+export function barsHaveNewDates(existing: OhlcBar[] | undefined, incoming: OhlcBar[]): boolean {
+  if (incoming.length === 0) return false;
+  if (!existing?.length) return true;
+  const have = new Set(existing.map((bar) => bar.date));
+  return incoming.some((bar) => !have.has(bar.date));
+}
+
 export function combineStored(entries: Array<StoredPrices | null | undefined>): StoredPrices | null {
   const present = entries.filter((entry): entry is StoredPrices => Boolean(entry && Array.isArray(entry.bars)));
   if (present.length === 0) return null;
@@ -119,8 +126,29 @@ export async function readStoredPrices(symbol: string): Promise<StoredPrices | n
   const fromBlob = await readBlobPrices(symbol);
   const combined = combineStored([fromBlob, fromDisk, fromMemory]);
   if (!combined) return null;
-  memory.set(symbol, combined);
+  if (barsHaveNewDates(fromBlob?.bars, combined.bars)) {
+    await writeStoredPrices(combined);
+  } else {
+    memory.set(symbol, combined);
+  }
   return cloneEntry(combined);
+}
+
+export async function mergeIntoPriceDatabase(entry: StoredPrices): Promise<{ uploaded: boolean; stored: StoredPrices }> {
+  const fromBlob = await readBlobPrices(entry.symbol);
+  const fromDisk = await readLocalPrices(entry.symbol);
+  const fromMemory = memory.get(entry.symbol) ?? null;
+  const combined = combineStored([fromBlob, fromDisk, fromMemory, entry]);
+  if (!combined) {
+    return { uploaded: false, stored: cloneEntry(entry) };
+  }
+  const uploaded = barsHaveNewDates(fromBlob?.bars, combined.bars);
+  if (uploaded) {
+    await writeStoredPrices(combined);
+  } else {
+    memory.set(entry.symbol, combined);
+  }
+  return { uploaded, stored: cloneEntry(combined) };
 }
 
 export async function writeStoredPrices(entry: StoredPrices): Promise<void> {

@@ -276,6 +276,7 @@ export interface PriceSyncResult {
   lastBar: string | null;
   completeThrough: string;
   downloaded: boolean;
+  uploaded?: boolean;
   barCount: number;
   source?: "yahoo" | "stooq" | "coinbase" | "binance" | "kraken" | "cache";
 }

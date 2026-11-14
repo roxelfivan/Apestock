@@ -66,14 +66,14 @@ export async function getUniverse(req: Request, res: Response): Promise<Response
 
 export async function syncPrices(req: Request, res: Response): Promise<Response> {
   try {
-    const body = (req.body ?? {}) as { ticker?: string; assetType?: string };
+    const body = (req.body ?? {}) as { ticker?: string; assetType?: string; bars?: unknown };
     const ticker = typeof body.ticker === "string" ? body.ticker.trim().toUpperCase() : "";
     const assetType = String(body.assetType ?? "").toUpperCase() as AssetType;
     if (!ticker) return res.status(400).json({ error: "Missing ticker." });
     if (assetType !== "STOCK" && assetType !== "CRYPTO") {
       return res.status(400).json({ error: "assetType must be STOCK or CRYPTO." });
     }
-    return res.json(await syncSymbolPrices(ticker, assetType));
+    return res.json(await syncSymbolPrices(ticker, assetType, body.bars));
   } catch (error) {
     return handleError(res, error);
   }
