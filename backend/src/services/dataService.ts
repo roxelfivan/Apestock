@@ -1,9 +1,20 @@
 import { DataError, ValidationError } from "../errors.js";
 import { addUtcDays, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
-import { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
+import { isCompleteOhlc, toOhlcBar } from "./ohlcParse.js";
 import { downloadDailyBars, type PriceSource } from "./priceProviders.js";
-import { mergeBars, mergeIntoPriceDatabase, readStoredPrices, writeStoredPrices } from "./priceStore.js";
+import {
+  barsHaveNewDates,
+  firstCoveringLayer,
+  mergeBars,
+  mergeIntoPriceDatabase,
+  readBlobPrices,
+  readLocalPrices,
+  readMemoryPrices,
+  readStoredPrices,
+  writeStoredPrices,
+  type StoredPrices,
+} from "./priceStore.js";
 
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
@@ -19,19 +30,57 @@ function sliceBars(bars: OhlcBar[], startDate: string, endDate: string): OhlcBar
   return bars.filter((bar) => bar.date >= startDate && bar.date <= endDate);
 }
 
+function completeStored(stored: StoredPrices | null): { stored: StoredPrices | null; dropped: boolean } {
+  if (!stored) return { stored: null, dropped: false };
+  const bars = stored.bars.filter(isCompleteOhlc);
+  if (bars.length === stored.bars.length) return { stored, dropped: false };
+  return { stored: { ...stored, bars }, dropped: true };
+}
+
 async function loadCoveredBars(
   symbol: string,
   assetType: AssetType,
   startDate: string,
   endDate: string,
 ): Promise<OhlcBar[]> {
-  const stored = await readStoredPrices(symbol);
-  const storedBars = stored?.bars ?? [];
-  let bars = storedBars.filter(isCompleteOhlc);
-  const droppedIncomplete = bars.length !== storedBars.length;
-  let source = stored?.source;
+  const blobLayer = completeStored(await readBlobPrices(symbol));
+  const fromBlob = blobLayer.stored;
+  let droppedIncomplete = blobLayer.dropped;
+  let picked = firstCoveringLayer([{ origin: "blob", stored: fromBlob }], startDate, endDate);
 
-  if (!rangeCovered(bars, startDate, endDate)) {
+  let fromDisk: StoredPrices | null = null;
+  if (!picked.covered) {
+    const localLayer = completeStored(await readLocalPrices(symbol));
+    fromDisk = localLayer.stored;
+    droppedIncomplete = droppedIncomplete || localLayer.dropped;
+    picked = firstCoveringLayer(
+      [
+        { origin: "blob", stored: fromBlob },
+        { origin: "local", stored: fromDisk },
+      ],
+      startDate,
+      endDate,
+    );
+  }
+
+  if (!picked.covered) {
+    const memoryLayer = completeStored(readMemoryPrices(symbol));
+    droppedIncomplete = droppedIncomplete || memoryLayer.dropped;
+    picked = firstCoveringLayer(
+      [
+        { origin: "blob", stored: fromBlob },
+        { origin: "local", stored: fromDisk },
+        { origin: "memory", stored: memoryLayer.stored },
+      ],
+      startDate,
+      endDate,
+    );
+  }
+
+  let bars = picked.stored?.bars ?? [];
+  let source = picked.stored?.source;
+
+  if (!picked.covered) {
     const first = bars[0]?.date;
     const last = bars[bars.length - 1]?.date;
     const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceSource }>> = [];
@@ -62,7 +111,7 @@ async function loadCoveredBars(
         updatedAt: new Date().toISOString(),
         source,
       });
-    } else if (droppedIncomplete && bars.length > 0) {
+    } else if (bars.length > 0 && droppedIncomplete) {
       await writeStoredPrices({
         symbol,
         assetType,
@@ -71,7 +120,7 @@ async function loadCoveredBars(
         source,
       });
     }
-  } else if (droppedIncomplete && bars.length > 0) {
+  } else if (bars.length > 0 && (droppedIncomplete || barsHaveNewDates(fromBlob?.bars, bars))) {
     await writeStoredPrices({
       symbol,
       assetType,

@@ -24,7 +24,13 @@ Daily OHLC is stored per symbol and reused so later backtests do not hit Yahoo a
 - **Local:** `data/prices/{SYMBOL}.json`
 - **Vercel:** a dedicated Blob folder `price-database/{SYMBOL}.json` (plus `/tmp` for the current isolate)
 
-Every Run / sweep / walk-forward reads that folder first. If the saved bars already cover the requested window through the latest completed session, **no download**. If a newer session is missing, only the gap is fetched (Yahoo library → Yahoo public chart → Stooq; crypto also Coinbase, Binance.US, Kraken) and merged back into `price-database/`. Loading a saved history result also POSTs its OHLC to `/api/prices/sync`; those bars are merged into Blob when it is missing dates, then a market gap is fetched only if the shared folder is still behind. Anyone using the deployed app therefore grows the shared folder over time.
+Every Run / sweep / walk-forward resolves prices in this order:
+
+1. **Vercel Blob** `price-database/{SYMBOL}.json`
+2. **Local files** `data/prices/{SYMBOL}.json` (or `/tmp` on serverless) if Blob is missing or does not cover the window
+3. **Download** only the remaining gap (Yahoo library → Yahoo public chart → Stooq; crypto also Coinbase, Binance.US, Kraken)
+
+If Blob already spans the requested dates through the latest completed session, **no local read and no download**. New days from a local file or a download are merged back into `price-database/`. Loading a saved history result also POSTs its OHLC to `/api/prices/sync`; those bars are merged into Blob when it is missing dates, then a market gap is fetched only if the shared folder is still behind. Anyone using the deployed app therefore grows the shared folder over time.
 
 Create a **Blob** store on the Vercel project (Storage → Blob). The platform injects `BLOB_READ_WRITE_TOKEN` (or OIDC + `BLOB_STORE_ID`). Without a store, Vercel still runs but each cold start forgets prices. Disk and Blob write failures are ignored so a backtest can still finish. Ranked universe lists still come from Yahoo.
 
