@@ -17,6 +17,8 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 - Shared Vercel Blob folder `price-database/{SYMBOL}.json`: every backtest reads
   it first and writes missing daily bars back, so later runs skip Yahoo when
   the window is already stored
+- Loading a saved run uploads its OHLC into that folder when Blob is missing
+  dates, then only downloads a market gap if the shared database is still behind
 
 ### Changed
 

@@ -1,9 +1,9 @@
-import { DataError } from "../errors.js";
+import { DataError, ValidationError } from "../errors.js";
 import { addUtcDays, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
-import { isCompleteOhlc, rangeCovered } from "./ohlcParse.js";
+import { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
 import { downloadDailyBars, type PriceSource } from "./priceProviders.js";
-import { mergeBars, readStoredPrices, writeStoredPrices } from "./priceStore.js";
+import { mergeBars, mergeIntoPriceDatabase, readStoredPrices, writeStoredPrices } from "./priceStore.js";
 
 const inflight = new Map<string, Promise<OhlcBar[]>>();
 
@@ -125,18 +125,51 @@ export interface PriceSyncResult {
   lastBar: string | null;
   completeThrough: string;
   downloaded: boolean;
+  uploaded: boolean;
   barCount: number;
   source?: PriceSource | "cache";
 }
 
-export async function syncSymbolPrices(ticker: string, assetType: AssetType): Promise<PriceSyncResult> {
+const MAX_INGEST_BARS = 4_000;
+
+export async function ingestSymbolPrices(
+  ticker: string,
+  assetType: AssetType,
+  rawBars: unknown,
+): Promise<{ uploaded: boolean; barCount: number }> {
+  const symbol = ticker.trim().toUpperCase();
+  if (!Array.isArray(rawBars)) {
+    throw new ValidationError("bars must be an array of daily OHLC rows.");
+  }
+  if (rawBars.length > MAX_INGEST_BARS) {
+    throw new ValidationError(`bars cannot exceed ${MAX_INGEST_BARS} rows.`);
+  }
+  const bars = rawBars
+    .map((row) => toOhlcBar(row as { date?: unknown; open?: unknown; high?: unknown; low?: unknown; close?: unknown }))
+    .filter((bar): bar is OhlcBar => bar !== null);
+  if (bars.length === 0) return { uploaded: false, barCount: 0 };
+  const result = await mergeIntoPriceDatabase({
+    symbol,
+    assetType,
+    bars,
+    updatedAt: new Date().toISOString(),
+  });
+  return { uploaded: result.uploaded, barCount: result.stored.bars.length };
+}
+
+export async function syncSymbolPrices(
+  ticker: string,
+  assetType: AssetType,
+  rawBars?: unknown,
+): Promise<PriceSyncResult> {
   const symbol = ticker.trim().toUpperCase();
   const completeThrough = latestCompleteSession(assetType);
+  const ingested = rawBars == null ? { uploaded: false, barCount: 0 } : await ingestSymbolPrices(symbol, assetType, rawBars);
   const before = await readStoredPrices(symbol);
   const start = addUtcDays(completeThrough, -WARM_HISTORY_DAYS);
   const bars = await fetchHistoricalData(symbol, assetType, start, completeThrough);
   const after = await readStoredPrices(symbol);
-  const lastBar = bars[bars.length - 1]?.date ?? null;
+  const lastBar = bars[bars.length - 1]?.date ?? after?.bars.at(-1)?.date ?? null;
   const downloaded = !before || (before.bars.at(-1)?.date ?? "") < (after?.bars.at(-1)?.date ?? "");
   return {
     ticker: symbol,
@@ -144,7 +177,8 @@ export async function syncSymbolPrices(ticker: string, assetType: AssetType): Pr
     lastBar,
     completeThrough,
     downloaded,
-    barCount: bars.length,
+    uploaded: ingested.uploaded,
+    barCount: after?.bars.length ?? bars.length,
     source: downloaded ? after?.source : "cache",
   };
 }
