@@ -17,9 +17,16 @@ Current version: **0.0.4**. See [CHANGELOG.md](CHANGELOG.md) for what changed in
 - Ranked lists are fetched from Yahoo (S&P membership from a public constituent file) and cached for 6 hours (memory, disk/Blob, and the browser)
 - Optional open symbol (`allowAnySymbol`)
 
-## Price cache
+## Price database
 
-Daily OHLC is saved per symbol and reused. Locally that is `data/prices/{SYMBOL}.json`. On Vercel/Lambda writes go to `/tmp` plus in-memory storage (the bundle is read-only); if `BLOB_READ_WRITE_TOKEN` is set they also go to a private Vercel Blob so later isolates reuse the same bars. Missing or newer bars are fetched in order from Yahoo's library, Yahoo's public daily chart, then **Stooq**. Crypto also tries **Coinbase**, **Binance.US**, and **Kraken** (no API keys). Yahoo's unofficial client is skipped after a quota or throttle. History is stored through the latest completed session (US cash close + 1 hour; crypto uses the prior UTC day). Run / sweep / walk-forward call `POST /api/prices/sync` for the selected ticker. Disk and Blob write failures are ignored so a backtest still runs. Ranked universe lists still come from Yahoo.
+Daily OHLC is stored per symbol and reused so later backtests do not hit Yahoo again for days already saved.
+
+- **Local:** `data/prices/{SYMBOL}.json`
+- **Vercel:** a dedicated Blob folder `price-database/{SYMBOL}.json` (plus `/tmp` for the current isolate)
+
+Every Run / sweep / walk-forward reads that folder first. If the saved bars already cover the requested window through the latest completed session, **no download**. If a newer session is missing, only the gap is fetched (Yahoo library → Yahoo public chart → Stooq; crypto also Coinbase, Binance.US, Kraken) and merged back into `price-database/`. Anyone using the deployed app therefore grows the shared folder over time.
+
+Create a **Blob** store on the Vercel project (Storage → Blob). The platform injects `BLOB_READ_WRITE_TOKEN` (or OIDC + `BLOB_STORE_ID`). Without a store, Vercel still runs but each cold start forgets prices. Disk and Blob write failures are ignored so a backtest can still finish. Ranked universe lists still come from Yahoo.
 
 ## Strategies
 
@@ -93,7 +100,7 @@ The browser calls same-origin `/api/backtest`. Vercel rewrites `/api/*` to the E
 
 Optional backend env:
 
-- `BLOB_READ_WRITE_TOKEN` — private Vercel Blob store so price and universe JSON survive cold starts (create a Blob store on the project)
+- `BLOB_READ_WRITE_TOKEN` — injected after you create a Blob store; holds the shared `price-database/` folder and universe snapshot
 - `STOOQ_API_KEY` — send if Stooq starts requiring a key on the CSV endpoint
 
 ## API

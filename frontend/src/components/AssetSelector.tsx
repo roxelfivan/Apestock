@@ -327,7 +327,7 @@ export default function AssetSelector({
                         ? "Kraken"
                         : "Yahoo"
               })`
-            : " (local cache)"}
+            : " (price database)"}
           .
         </p>
       ) : null}
