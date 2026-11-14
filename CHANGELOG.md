@@ -19,6 +19,22 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   folded away, extra metrics behind a disclosure, charts before the committee,
   and a card blotter on phones
 
+## [0.0.4] - 2026-11-14
+
+Click any indicator to drive every chart, rank the committee by performance,
+and run both servers with one command.
+
+### Added
+
+- Click any card in the indicator committee to switch the whole run to that
+  strategy: the logic picker, equity curve, price + indicator overlay,
+  drawdown, monthly grid, and trade blotter all refresh on that strategy's
+  backtest, and the URL keeps the new strategy and params
+- Sort control on the indicator committee: rank the cards by vote, return,
+  Sharpe, or trade count, with a rank number on every card
+- `npm run dev` starts the backend and frontend together (`dev:backend` and
+  `dev:frontend` run them separately)
+
 ### Removed
 
 - Unused parallel price-feed module (`backend/src/services/feeds`) left over from the
@@ -30,6 +46,11 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   is set, so cold starts reuse completed daily bars instead of re-hitting feeds
 - The UI no longer syncs prices or refreshes the universe on every page load;
   ranked lists reuse a 6-hour local snapshot, and prices sync on Run / research
+
+### Fixed
+
+- Switching indicators no longer lets a slower in-flight run overwrite the
+  newer result, so the panel, charts, and URL always agree
 
 ## [0.0.3] - 2026-11-10
 
@@ -104,7 +125,8 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.4
 [0.0.3]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.3
 [0.0.2]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.2
 [0.0.1]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.1

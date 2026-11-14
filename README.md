@@ -2,7 +2,7 @@
 
 Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; the React UI configures the run, inspects trades, and charts the result.
 
-Current version: **0.0.3**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+Current version: **0.0.4**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
 
@@ -56,19 +56,24 @@ From the repo root:
 npm install
 ```
 
-Then use two terminals.
+Then run both servers in one terminal:
 
 ```bash
-npm start -w apestock-backend
+npm run dev
 ```
 
-Backend listens on `http://localhost:3001`.
+Backend listens on `http://localhost:3001`, frontend on `http://localhost:5173`
+and proxies `/api` to the backend.
+
+To run them separately, use two terminals:
 
 ```bash
-npm run dev -w frontend
+npm run dev:backend
 ```
 
-Frontend is on `http://localhost:5173` and proxies `/api` to the backend.
+```bash
+npm run dev:frontend
+```
 
 ```bash
 npm test
