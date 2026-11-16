@@ -4,6 +4,7 @@ import { httpStatus, sanitizeUserError } from "../errors.js";
 import { executeBacktest } from "../engine/execute.js";
 import { executeSweep, executeWalkForward } from "../engine/research.js";
 import { syncSymbolPrices } from "../services/dataService.js";
+import { summarizePriceCache } from "../services/priceStore.js";
 import { getUniverseSnapshot } from "../services/universeService.js";
 import type { AssetType, BacktestRequest } from "../types.js";
 
@@ -74,6 +75,16 @@ export async function syncPrices(req: Request, res: Response): Promise<Response>
       return res.status(400).json({ error: "assetType must be STOCK or CRYPTO." });
     }
     return res.json(await syncSymbolPrices(ticker, assetType, body.bars));
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function getPriceSummary(req: Request, res: Response): Promise<Response> {
+  try {
+    const ticker = typeof req.params.ticker === "string" ? req.params.ticker.trim().toUpperCase() : "";
+    if (!ticker) return res.status(400).json({ error: "Missing ticker." });
+    return res.json(await summarizePriceCache(ticker));
   } catch (error) {
     return handleError(res, error);
   }

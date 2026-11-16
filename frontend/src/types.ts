@@ -280,3 +280,16 @@ export interface PriceSyncResult {
   barCount: number;
   source?: "yahoo" | "stooq" | "coinbase" | "binance" | "kraken" | "cache";
 }
+
+export interface PriceCacheSummary {
+  ticker: string;
+  assetType?: AssetType;
+  present: boolean;
+  layer: "blob" | "local" | "memory" | null;
+  path: string | null;
+  barCount: number;
+  firstBar: string | null;
+  lastBar: string | null;
+  updatedAt: string | null;
+  source?: "yahoo" | "stooq" | "coinbase" | "binance" | "kraken";
+}

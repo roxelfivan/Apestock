@@ -12,6 +12,7 @@ import {
   mergeBars,
   priceDatabaseBlobPath,
   readStoredPrices,
+  summarizePriceCache,
   writeStoredPrices,
   type StoredPrices,
 } from "./priceStore.js";
@@ -195,6 +196,33 @@ describe("backtest price lookup Blob → local → download", { concurrency: fal
       await writeJson(path.join(local, "MSFT.json"), entry("MSFT", [bar("2024-01-02", 99)]));
       const stored = await readStoredPrices("MSFT");
       assert.equal(stored?.bars[0]?.close, 11);
+    });
+  });
+
+  test("summarizePriceCache reports Blob metadata without downloading", async () => {
+    await withCacheDirs(async ({ blob }) => {
+      await writeJson(
+        path.join(blob, priceDatabaseBlobPath("AAPL")),
+        entry("AAPL", [bar("2024-01-02", 10), bar("2024-01-03", 11)]),
+      );
+      const summary = await summarizePriceCache("AAPL");
+      assert.equal(summary.present, true);
+      assert.equal(summary.layer, "blob");
+      assert.equal(summary.path, priceDatabaseBlobPath("AAPL"));
+      assert.equal(summary.barCount, 2);
+      assert.equal(summary.firstBar, "2024-01-02");
+      assert.equal(summary.lastBar, "2024-01-03");
+    });
+  });
+
+  test("summarizePriceCache falls back to local when Blob is empty", async () => {
+    await withCacheDirs(async ({ local }) => {
+      await writeJson(path.join(local, "META.json"), entry("META", [bar("2024-02-01", 5)]));
+      const summary = await summarizePriceCache("META");
+      assert.equal(summary.present, true);
+      assert.equal(summary.layer, "local");
+      assert.equal(summary.barCount, 1);
+      assert.equal(summary.lastBar, "2024-02-01");
     });
   });
 

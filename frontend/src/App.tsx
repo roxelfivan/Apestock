@@ -5,13 +5,14 @@ import CommitteeBox from "./components/CommitteeBox";
 import DrawdownChart from "./components/DrawdownChart";
 import MetricsDashboard from "./components/MetricsDashboard";
 import MonthlyGrid from "./components/MonthlyGrid";
+import PriceCacheSummary from "./components/PriceCacheSummary";
 import PriceChart from "./components/PriceChart";
 import ResearchPanels from "./components/ResearchPanels";
 import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
 import { isValidTicker, readStoredUniverse, storeUniverse, universeFor, universeIsFresh } from "./data/universes";
-import { fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
+import { fetchPriceSummary, fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
 import { sanitizeUserError } from "./lib/errors";
 import { DEFAULT_PARAMS, STRATEGY_LABELS } from "./lib/defaults";
 import { btnPrimary } from "./ui";
@@ -22,6 +23,7 @@ import type {
   AssetType,
   BacktestConfig,
   BacktestResult,
+  PriceCacheSummary as PriceCacheSummaryData,
   SavedRun,
   SizingMode,
   StrategyName,
@@ -73,6 +75,8 @@ export default function App() {
   const [universeLoading, setUniverseLoading] = useState(() => !readStoredUniverse());
   const [universeError, setUniverseError] = useState("");
   const [priceSync, setPriceSync] = useState<PriceSyncResult | null>(null);
+  const [priceSummary, setPriceSummary] = useState<PriceCacheSummaryData | null>(null);
+  const [priceSummaryLoading, setPriceSummaryLoading] = useState(false);
   const [pane, setPane] = useState<"setup" | "results">("setup");
   const errorRef = useRef<HTMLDivElement>(null);
   const runIdRef = useRef(0);
@@ -148,6 +152,35 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const symbol = ticker.trim().toUpperCase();
+    if (!symbol) {
+      setPriceSummary(null);
+      setPriceSummaryLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPriceSummaryLoading(true);
+    const timer = window.setTimeout(() => {
+      fetchPriceSummary(symbol)
+        .then((summary) => {
+          if (cancelled) return;
+          setPriceSummary(summary);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setPriceSummary(null);
+        })
+        .finally(() => {
+          if (!cancelled) setPriceSummaryLoading(false);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [ticker, priceSync]);
 
   function markStale() {
     if (result) setStale(true);
@@ -378,6 +411,7 @@ export default function App() {
                 markStale();
               }}
             />
+            <PriceCacheSummary ticker={ticker} summary={priceSummary} loading={priceSummaryLoading} />
             <StrategyForm
               strategy={strategy}
               params={params}

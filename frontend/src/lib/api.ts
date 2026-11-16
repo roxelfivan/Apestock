@@ -2,6 +2,7 @@ import type {
   ApiError,
   BacktestConfig,
   BacktestResult,
+  PriceCacheSummary,
   PriceSyncResult,
   SweepResult,
   UniverseSnapshot,
@@ -73,6 +74,22 @@ export async function syncPrices(
   const payload = (await response.json()) as PriceSyncResult & ApiError;
   if (!response.ok) {
     throw new Error(payload.error || "Unable to sync prices.");
+  }
+  return payload;
+}
+
+export async function fetchPriceSummary(ticker: string): Promise<PriceCacheSummary> {
+  const symbol = ticker.trim().toUpperCase();
+  const response = await fetch(`/api/prices/${encodeURIComponent(symbol)}`);
+  const raw = await response.text();
+  let payload: (PriceCacheSummary & ApiError) | null = null;
+  try {
+    payload = raw ? (JSON.parse(raw) as PriceCacheSummary & ApiError) : null;
+  } catch {
+    throw new Error(sanitizeUserError(raw, "Unable to load price cache summary."));
+  }
+  if (!response.ok || !payload) {
+    throw new Error(sanitizeUserError(payload?.error, "Unable to load price cache summary."));
   }
   return payload;
 }

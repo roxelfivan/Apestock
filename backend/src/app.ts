@@ -1,6 +1,13 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
-import { getUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./controllers/backtestController.js";
+import {
+  getPriceSummary,
+  getUniverse,
+  runBacktest,
+  runSweep,
+  runWalkForward,
+  syncPrices,
+} from "./controllers/backtestController.js";
 
 const app = express();
 
@@ -16,6 +23,7 @@ app.post("/api/backtest/sweep", runSweep);
 app.post("/api/backtest/walk-forward", runWalkForward);
 app.get("/api/universe", getUniverse);
 app.post("/api/prices/sync", syncPrices);
+app.get("/api/prices/:ticker", getPriceSummary);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);

@@ -114,19 +114,101 @@ export async function readLocalPrices(symbol: string): Promise<StoredPrices | nu
 }
 
 export async function readBlobPrices(symbol: string): Promise<StoredPrices | null> {
-  const primary = await readBlobPath(priceDatabaseBlobPath(symbol));
+  const hit = await readBlobPricesWithPath(symbol);
+  return hit?.stored ?? null;
+}
+
+async function readBlobPricesWithPath(
+  symbol: string,
+): Promise<{ stored: StoredPrices; path: string } | null> {
+  const primaryPath = priceDatabaseBlobPath(symbol);
+  const primary = await readBlobPath(primaryPath);
   const parsedPrimary = primary ? parseStored(primary) : null;
-  if (parsedPrimary) return parsedPrimary;
-  const legacy = await readBlobPath(legacyPriceBlobPath(symbol));
-  return legacy ? parseStored(legacy) : null;
+  if (parsedPrimary) return { stored: parsedPrimary, path: primaryPath };
+  const legacyPath = legacyPriceBlobPath(symbol);
+  const legacy = await readBlobPath(legacyPath);
+  const parsedLegacy = legacy ? parseStored(legacy) : null;
+  if (parsedLegacy) return { stored: parsedLegacy, path: legacyPath };
+  return null;
+}
+
+export type PriceCacheLayer = "blob" | "local" | "memory";
+
+export interface PriceCacheSummary {
+  ticker: string;
+  assetType?: AssetType;
+  present: boolean;
+  layer: PriceCacheLayer | null;
+  path: string | null;
+  barCount: number;
+  firstBar: string | null;
+  lastBar: string | null;
+  updatedAt: string | null;
+  source?: PriceSource;
+}
+
+function emptySummary(ticker: string): PriceCacheSummary {
+  return {
+    ticker,
+    present: false,
+    layer: null,
+    path: null,
+    barCount: 0,
+    firstBar: null,
+    lastBar: null,
+    updatedAt: null,
+  };
+}
+
+function summaryFromStored(
+  ticker: string,
+  stored: StoredPrices,
+  layer: PriceCacheLayer,
+  path: string,
+): PriceCacheSummary {
+  const firstBar = stored.bars[0]?.date ?? null;
+  const lastBar = stored.bars.at(-1)?.date ?? null;
+  return {
+    ticker,
+    assetType: stored.assetType,
+    present: stored.bars.length > 0,
+    layer,
+    path,
+    barCount: stored.bars.length,
+    firstBar,
+    lastBar,
+    updatedAt: stored.updatedAt,
+    source: stored.source,
+  };
+}
+
+/** Read-only cache metadata (Blob first, then local). Does not download. */
+export async function summarizePriceCache(ticker: string): Promise<PriceCacheSummary> {
+  const symbol = ticker.trim().toUpperCase();
+  if (!symbol) return emptySummary("");
+
+  const fromBlob = await readBlobPricesWithPath(symbol);
+  if (fromBlob) {
+    return summaryFromStored(symbol, fromBlob.stored, "blob", fromBlob.path);
+  }
+
+  const fromDisk = await readLocalPrices(symbol);
+  if (fromDisk) {
+    const absolute = fileFor(priceCacheDir(), symbol);
+    const cwd = process.cwd();
+    const displayPath = absolute.startsWith(`${cwd}/`)
+      ? absolute.slice(cwd.length + 1)
+      : `data/prices/${safeSymbol(symbol)}.json`;
+    return summaryFromStored(symbol, fromDisk, "local", displayPath);
+  }
+
+  return emptySummary(symbol);
 }
 
 export function readMemoryPrices(symbol: string): StoredPrices | null {
   const stored = memory.get(symbol);
   return stored ? cloneEntry(stored) : null;
 }
-
-export type PriceCacheLayer = "blob" | "local" | "memory";
 
 /**
  * Walk cache layers in order, stopping at the first that covers [startDate, endDate].
