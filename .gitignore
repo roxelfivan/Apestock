@@ -10,3 +10,4 @@ dist-ssr/
 .env.*
 .vercel
 .idea/
+.env*

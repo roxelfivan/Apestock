@@ -2,7 +2,7 @@
 
 Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; the React UI configures the run, inspects trades, and charts the result.
 
-Current version: **0.0.5**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+Current version: **0.0.6**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
 
@@ -138,6 +138,7 @@ Also:
 
 - `GET /api/health`
 - `GET /api/universe?assetType=STOCK|CRYPTO`
+- `GET /api/prices/:ticker` — read-only cache summary (Blob first, then local): path, layer, bar count, date range, `updatedAt`, source
 - `POST /api/prices/sync` — `{ "ticker": "AAPL", "assetType": "STOCK", "bars": [] }` incremental EOD refresh. Optional `bars` merge into the Blob price database first (UI sends them when loading a saved run). Then missing days through the latest completed session are fetched if needed.
 - `POST /api/backtest/sweep` — small parameter grid + overfitting warning
 - `POST /api/backtest/walk-forward` — expanding-window in-sample pick, out-of-sample test

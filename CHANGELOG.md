@@ -12,11 +12,22 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-11-16
+
+Blob-first price lookup, a price-database summary in the UI, and production Blob seeding.
+
+### Added
+
+- Setup-column **Price database** summary for the selected ticker (`GET /api/prices/:ticker`):
+  path, layer (Blob/local), bar count, date range, updated time, and source
+- Private Vercel Blob store connected for production so shared `price-database/`
+  objects persist across cold starts
+
 ### Changed
 
 - Backtests resolve daily bars in order: Vercel Blob `price-database/`, then local
   `data/prices/`, then Yahoo and the other free feeds. A covering Blob object
-  skips both the local files and the download.
+  skips both the local files and the download
 
 ## [0.0.5] - 2026-11-14
 
@@ -143,7 +154,8 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.6
 [0.0.5]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.5
 [0.0.4]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.4
 [0.0.3]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.3
