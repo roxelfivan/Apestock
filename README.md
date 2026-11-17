@@ -4,6 +4,8 @@ Daily (EOD) stock and crypto backtester. Strategies run on a Node.js backend; th
 
 Current version: **0.0.6**. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
+User guide: [docs/](docs/README.md) (in-app **?**). Developer manual: [func_spec/](func_spec/README.md) (in-app **`{ }`**). Both stay on the same version as `package.json`.
+
 ## Stack
 
 - Frontend: React + TypeScript (Vite), Tailwind CSS, Recharts
@@ -91,6 +93,7 @@ npm run dev:frontend
 ```bash
 npm test
 npm run typecheck
+npm run check:docs
 ```
 
 ## Deploy on Vercel (one project, two services)

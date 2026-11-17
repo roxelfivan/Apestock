@@ -61,6 +61,108 @@ details[open] > summary::after {
   transform: rotate(-135deg);
 }
 
+.docs-article {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.docs-article h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.docs-article h2 {
+  margin: 1.75rem 0 0.6rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  color: #fff;
+}
+
+.docs-article h3 {
+  margin: 1.35rem 0 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: #f8fafc;
+}
+
+.docs-article p,
+.docs-article ul,
+.docs-article ol,
+.docs-article pre,
+.docs-article table,
+.docs-article blockquote {
+  margin: 0 0 0.9rem;
+}
+
+.docs-article ul,
+.docs-article ol {
+  padding-left: 1.25rem;
+}
+
+.docs-article li + li {
+  margin-top: 0.25rem;
+}
+
+.docs-article a {
+  color: #34d399;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.docs-article code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  color: #a7f3d0;
+}
+
+.docs-article pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #1e293b;
+  background: #020617;
+  padding: 0.85rem 1rem;
+}
+
+.docs-article pre code {
+  color: #e2e8f0;
+}
+
+.docs-article table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.docs-article th,
+.docs-article td {
+  border: 1px solid #1e293b;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.docs-article th {
+  background: #0f172a;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.docs-article blockquote {
+  border-left: 3px solid #34d399;
+  padding-left: 0.9rem;
+  color: #94a3b8;
+}
+
+.docs-article hr {
+  margin: 1.5rem 0;
+  border: 0;
+  border-top: 1px solid #1e293b;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
