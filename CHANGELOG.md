@@ -12,6 +12,10 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-11-17
+
+Help and Functional Specification in the app, and backtests that finish from stored Blob bars when Yahoo is limited.
+
 ### Added
 
 - In-app **Help** (`?`) from `docs/` and **Functional Specification** (`{ }`) from
@@ -178,7 +182,8 @@ with a Node.js engine and a React UI.
 - Hover tooltip restoring date, strategy return, and benchmark from the
   hovered point
 
-[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/roxelfivan/Apestock/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.7
 [0.0.6]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.6
 [0.0.5]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.5
 [0.0.4]: https://github.com/roxelfivan/Apestock/releases/tag/v0.0.4

@@ -70,7 +70,7 @@ Central rules:
 2. **Fills are worse than the close.** Slippage is applied on the open; commission is bps plus $/share.
 3. **Degrade, do not crash.** Blob/disk write failures are ignored so a backtest can still finish. Yahoo HTML is not shown in the UI.
 4. **One request, one result version.** `RESULT_VERSION` is `3` and includes the committee. Do not silently change the JSON shape.
-5. **Docs match the npm version.** Help **What's new** and this spec's **Applies to** line track `package.json` `version` (currently **0.0.6**).
+5. **Docs match the npm version.** Help **What's new** and this spec's **Applies to** line track `package.json` `version` (currently **0.0.7**).
 
 ## 6. Non-goals
 
@@ -86,7 +86,8 @@ Full changelogs are in [`CHANGELOG.md`](../CHANGELOG.md). User-facing copy is [`
 
 | Version | What changed |
 |---|---|
-| v0.0.6 | **Blob-first prices.** Covering `price-database/` skips local files and downloads. Setup **Price database** summary (`GET /api/prices/:ticker`). Production Blob store. **Help (?)** and **Functional Specification (`{ }`)** added in this docs pass (same version stamp). |
+| v0.0.7 | **Stored prices finish the run.** Blob/local bars are used when Yahoo is limited; amber stored-range notice; Run does not refresh screeners first; Results stay visible if history save hits quota. In-app Help and Functional Specification. |
+| v0.0.6 | **Blob-first prices.** Covering `price-database/` skips local files and downloads. Setup **Price database** summary (`GET /api/prices/:ticker`). Production Blob store. |
 | v0.0.5 | Shared Blob `price-database/{SYMBOL}.json`; History Load uploads OHLC; denser phone/desktop dashboard. |
 | v0.0.4 | Click committee card to drive the run; sort; `npm run dev`; Blob persistence for caches; drop unused `feeds` module; in-flight run race fixed. |
 | v0.0.3 | Indicator committee (`version: 3`); 15 more strategies; Yahoo/Stooq/crypto fallbacks; ape home icon. |

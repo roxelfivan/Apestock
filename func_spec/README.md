@@ -2,7 +2,7 @@
 
 > The developer-facing manual for this repository. It describes **what Apestock does, how it is built, and the contracts you must respect when you change it.**
 
-**Applies to:** `v0.0.6` · package version **0.0.6**
+**Applies to:** `v0.0.7` · package version **0.0.7**
 **Audience:** engineers new to the repo, and anyone returning to it after a few months.
 
 ---
@@ -76,7 +76,7 @@ This spec describes the code as it is. When you change behaviour:
 2. **Daily bars resolve Blob → local → download.** [`dataService.ts`](../backend/src/services/dataService.ts). A covering Blob object skips disk and the feeds. See [Prices & universe](05-prices-and-universe.md).
 3. **The React app is a form plus charts.** No global store. Config is the URL; history is `localStorage`. See [API & UI](06-api-and-ui.md).
 4. **Committee votes are zones, not fills.** [`stance.ts`](../backend/src/engine/stance.ts) `regimeVote`. Chart triangles come from the selected strategy's `events`.
-5. **Result payload `version` is 3** (`RESULT_VERSION` in [`execute.ts`](../backend/src/engine/execute.ts)), independent of the npm package version **0.0.6**.
+5. **Result payload `version` is 3** (`RESULT_VERSION` in [`execute.ts`](../backend/src/engine/execute.ts)), independent of the npm package version **0.0.7**.
 
 ## Repository shape
 

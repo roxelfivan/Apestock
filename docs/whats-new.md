@@ -2,6 +2,17 @@
 
 This page is the in-app changelog. It stays with the version in the header. Older releases are summarized at the bottom; the full developer changelog is [CHANGELOG.md](https://github.com/roxelfivan/Apestock/blob/main/CHANGELOG.md) on GitHub.
 
+## v0.0.7 — Stored prices survive Yahoo limits
+
+**A Blob file is enough to finish a run. Yahoo quota no longer blanks Results.**
+
+- **Help and spec in the app.** `?` opens the user guide; `{ }` opens the Functional Specification. Both match this npm version.
+- **Use the price database.** If `price-database/{SYMBOL}.json` already has bars, Run loads them instead of failing on Yahoo's unofficial feed.
+- **Show the stored range.** An amber notice names ticker, bar count, and dates when live feeds are limited.
+- **Results stay up.** Charts and analysis stay on the Results tab even if the phone cannot write run history.
+
+No migration.
+
 ## v0.0.6 — Blob-first prices and a price-database summary
 
 **The shared price folder is checked first. Setup shows what is already stored for the ticker.**
@@ -59,6 +70,7 @@ A slower in-flight run no longer overwrites a newer click.
 
 ## Earlier releases
 
+- **v0.0.7** — Stored Blob bars finish a run when Yahoo is limited; Help and spec in-app.
 - **v0.0.6** — Blob-first lookup; price-database summary.
 - **v0.0.5** — Shared `price-database/`; denser phone/desktop UI.
 - **v0.0.4** — Click committee to switch; sort; `npm run dev`.
