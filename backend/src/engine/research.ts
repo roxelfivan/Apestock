@@ -1,5 +1,5 @@
 import { ValidationError } from "../errors.js";
-import { fetchHistoricalData } from "../services/dataService.js";
+import { fetchHistoricalLoad } from "../services/dataService.js";
 import type {
   BacktestRequest,
   StrategyName,
@@ -191,15 +191,15 @@ function toCell(result: ReturnType<typeof buildResult>): SweepCell {
 
 export async function executeSweep(body: BacktestRequest): Promise<SweepResult> {
   const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
-  const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
+  const load = await fetchHistoricalLoad(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
   const grid = uniqueParams(defaultGrid(parsed.strategy));
   const results = grid.map((params) =>
-    toCell(buildResult({ ...parsed, params }, bars, { committee: false })),
+    toCell(buildResult({ ...parsed, params }, load.bars, { committee: false, dataNotice: load.notice })),
   );
   return {
     ticker: parsed.ticker,
     strategy: parsed.strategy,
-    warning: SWEEP_WARNING,
+    warning: load.notice ? `${load.notice} ${SWEEP_WARNING}` : SWEEP_WARNING,
     results,
   };
 }
@@ -207,7 +207,8 @@ export async function executeSweep(body: BacktestRequest): Promise<SweepResult> 
 export async function executeWalkForward(body: BacktestRequest): Promise<WalkForwardResult> {
   const folds = Math.min(5, Math.max(2, Number(body.folds ?? 3)));
   const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
-  const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
+  const load = await fetchHistoricalLoad(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
+  const bars = load.bars;
   const startIndex = Math.max(0, bars.findIndex((bar) => bar.date >= parsed.startDate));
   const testBars = bars.slice(startIndex);
   if (testBars.length < folds * 40) {
@@ -259,9 +260,9 @@ export async function executeWalkForward(body: BacktestRequest): Promise<WalkFor
   return {
     ticker: parsed.ticker,
     strategy: parsed.strategy,
-    warning: WALK_FORWARD_WARNING,
+    warning: load.notice ? `${load.notice} ${WALK_FORWARD_WARNING}` : WALK_FORWARD_WARNING,
     folds: foldSummaries,
-    combined,
+    combined: { ...combined, dataNotice: load.notice },
   };
 }
 

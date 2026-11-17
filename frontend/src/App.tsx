@@ -294,7 +294,7 @@ export default function App() {
     } catch (err) {
       if (runIdRef.current !== runId) return;
       setResult(null);
-      setError(sanitizeUserError(err, "Unable to run backtest."));
+      setError(sanitizeUserError(err, "Unable to run backtest.", priceSummary));
       setPane("setup");
       queueMicrotask(() => errorRef.current?.focus());
     } finally {
@@ -338,7 +338,7 @@ export default function App() {
       await refreshPrices();
       setSweep(await runSweep(config));
     } catch (err) {
-      setError(sanitizeUserError(err, "Sweep failed."));
+      setError(sanitizeUserError(err, "Sweep failed.", priceSummary));
     } finally {
       setResearchBusy(false);
     }
@@ -351,7 +351,7 @@ export default function App() {
       await refreshPrices();
       setWalkForward(await runWalkForward(config));
     } catch (err) {
-      setError(sanitizeUserError(err, "Walk-forward failed."));
+      setError(sanitizeUserError(err, "Walk-forward failed.", priceSummary));
     } finally {
       setResearchBusy(false);
     }
@@ -469,16 +469,31 @@ export default function App() {
 
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
           <div className={`min-w-0 space-y-4 lg:block ${pane === "setup" ? "block" : "hidden"}`}>
-            {error ? (
+            {result?.dataNotice ? (
+              <div
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 outline-none break-words"
+                role="status"
+              >
+                <p className="font-semibold text-amber-50">Using stored prices</p>
+                <p className="mt-1 text-amber-100/90">{result.dataNotice}</p>
+              </div>
+            ) : error ? (
               <div
                 ref={errorRef}
                 tabIndex={-1}
                 role="alert"
                 aria-labelledby="error-title"
-                className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 outline-none break-words focus-visible:ring-2 focus-visible:ring-rose-400"
+                className={
+                  priceSummary?.present
+                    ? "rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 outline-none break-words focus-visible:ring-2 focus-visible:ring-amber-400"
+                    : "rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 outline-none break-words focus-visible:ring-2 focus-visible:ring-rose-400"
+                }
               >
-                <p id="error-title" className="font-semibold text-rose-200">
-                  There is a problem
+                <p
+                  id="error-title"
+                  className={priceSummary?.present ? "font-semibold text-amber-50" : "font-semibold text-rose-200"}
+                >
+                  {priceSummary?.present ? "Stored prices are still available" : "There is a problem"}
                 </p>
                 <p className="mt-1">{error}</p>
               </div>
@@ -498,7 +513,12 @@ export default function App() {
                 markStale();
               }}
             />
-            <PriceCacheSummary ticker={ticker} summary={priceSummary} loading={priceSummaryLoading} />
+            <PriceCacheSummary
+              ticker={ticker}
+              summary={priceSummary}
+              loading={priceSummaryLoading}
+              feedLimited={Boolean(result?.dataNotice || (error && priceSummary?.present))}
+            />
             <StrategyForm
               strategy={strategy}
               params={params}
@@ -570,6 +590,15 @@ export default function App() {
             id="results"
             className={`min-w-0 space-y-4 scroll-mt-4 lg:block ${pane === "results" ? "block" : "hidden"}`}
           >
+            {result?.dataNotice ? (
+              <div
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 break-words"
+                role="status"
+              >
+                <p className="font-semibold text-amber-50">Using stored prices</p>
+                <p className="mt-1 text-amber-100/90">{result.dataNotice}</p>
+              </div>
+            ) : null}
             <MetricsDashboard
               result={result}
               compare={compare}

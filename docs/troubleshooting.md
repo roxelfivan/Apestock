@@ -6,7 +6,9 @@ The price-database card is a **read-only** listing of `price-database/{SYMBOL}.j
 
 Older builds still called Yahoo to fill a warmup prefix or a 1–2 session tail, then **discarded the Blob** if that unofficial feed returned a quota error. Current builds keep the stored bars when they already overlap the test window, and only download when the file is empty or more than a few sessions behind.
 
-If you still see the quota sentence, the stored file has no bars inside the selected dates (or Yahoo and Stooq both failed on a truly empty ticker).
+If stored bars exist, the app should keep them on screen: an amber **Using stored prices** notice names the ticker, bar count, and range, and the Price database card stays visible. The generic Yahoo quota sentence is only used when there is no stored file.
+
+If you still see the quota sentence with an empty Price database card, this ticker has no Blob/local bars yet (or Yahoo and Stooq both failed on a truly empty ticker).
 
 ## Run fails with a short error about the ticker or dates
 

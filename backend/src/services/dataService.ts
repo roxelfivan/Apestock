@@ -1,4 +1,4 @@
-import { DataError, ValidationError } from "../errors.js";
+import { DataError, ValidationError, describeStoredBars, isQuotaOrThrottleError, sanitizeUserError } from "../errors.js";
 import { addUtcDays, daysBetween, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
 import { normalizeOhlcBars, toOhlcBar } from "./ohlcParse.js";
@@ -16,7 +16,12 @@ import {
   type StoredPrices,
 } from "./priceStore.js";
 
-const inflight = new Map<string, Promise<OhlcBar[]>>();
+export interface HistoricalLoad {
+  bars: OhlcBar[];
+  notice?: string;
+}
+
+const inflight = new Map<string, Promise<HistoricalLoad>>();
 
 function cloneBars(bars: OhlcBar[]): OhlcBar[] {
   return bars.map((bar) => ({ ...bar }));
@@ -49,12 +54,23 @@ async function downloadGaps(
   return downloadDailyBars(symbol, assetType, startDate, endDate);
 }
 
+function storedPhrase(symbol: string, bars: OhlcBar[]): string {
+  return describeStoredBars(symbol, bars[0]?.date, bars.at(-1)?.date, bars.length);
+}
+
+function feedFailureNotice(symbol: string, bars: OhlcBar[], error: unknown): string {
+  const feed = isQuotaOrThrottleError(error)
+    ? "Live feeds hit a request limit."
+    : sanitizeUserError(error, "Live price feeds failed.");
+  return `${feed} ${storedPhrase(symbol, bars)} This run uses the stored file.`;
+}
+
 async function loadCoveredBars(
   symbol: string,
   assetType: AssetType,
   startDate: string,
   endDate: string,
-): Promise<OhlcBar[]> {
+): Promise<HistoricalLoad> {
   const blobLayer = completeStored(await readBlobPrices(symbol));
   const fromBlob = blobLayer.stored;
   let droppedIncomplete = blobLayer.dropped;
@@ -91,6 +107,7 @@ async function loadCoveredBars(
 
   let bars = picked.stored?.bars ?? [];
   let source = picked.stored?.source;
+  let notice: string | undefined;
   const overlap = sliceBars(bars, startDate, endDate);
   const last = bars[bars.length - 1]?.date;
   const suffixGapDays = last && last < endDate ? daysBetween(last, endDate) : 0;
@@ -99,9 +116,8 @@ async function loadCoveredBars(
     const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceSource }>> = [];
     // Warmup prefix before the first stored bar must not block a run that already
     // has bars inside the requested window. Yahoo quota would otherwise discard Blob.
-    const needFullDownload = bars.length === 0 || overlap.length === 0;
-    const needSuffix =
-      Boolean(last && last < endDate) && (overlap.length === 0 || suffixGapDays > MAX_SKIPPED_SUFFIX_DAYS);
+    const needFullDownload = bars.length === 0;
+    const needSuffix = Boolean(last && last < endDate) && overlap.length > 0 && suffixGapDays > MAX_SKIPPED_SUFFIX_DAYS;
 
     if (needFullDownload) {
       downloads.push(downloadGaps(symbol, assetType, startDate, endDate));
@@ -126,7 +142,8 @@ async function loadCoveredBars(
           source,
         });
       } catch (error) {
-        if (overlap.length === 0) throw error;
+        if (bars.length === 0) throw error;
+        notice = feedFailureNotice(symbol, bars, error);
       }
     } else if (bars.length > 0 && droppedIncomplete) {
       await writeStoredPrices({
@@ -147,19 +164,29 @@ async function loadCoveredBars(
     });
   }
 
-  const window = sliceBars(bars, startDate, endDate);
+  let window = sliceBars(bars, startDate, endDate);
+  if (window.length === 0 && bars.length > 0) {
+    notice =
+      notice ??
+      `${storedPhrase(symbol, bars)} The selected dates are outside that file; this run uses the stored range.`;
+    window = bars;
+  }
   if (window.length === 0) {
     throw new DataError(`Data gap: no valid OHLC bars for ${symbol}.`);
   }
-  return window;
+  return { bars: window, notice };
 }
 
-export async function fetchHistoricalData(
+function cloneLoad(load: HistoricalLoad): HistoricalLoad {
+  return { bars: cloneBars(load.bars), notice: load.notice };
+}
+
+export async function fetchHistoricalLoad(
   ticker: string,
   assetType: AssetType,
   startDate: string,
   endDate: string,
-): Promise<OhlcBar[]> {
+): Promise<HistoricalLoad> {
   if (!ticker || typeof ticker !== "string") {
     throw new DataError("Missing ticker.");
   }
@@ -174,13 +201,22 @@ export async function fetchHistoricalData(
   const key = `${symbol}|${targetStart}|${targetEnd}|1d`;
 
   const pending = inflight.get(key);
-  if (pending) return cloneBars(await pending);
+  if (pending) return cloneLoad(await pending);
 
   const request = loadCoveredBars(symbol, assetType, targetStart, targetEnd).finally(() => {
     inflight.delete(key);
   });
   inflight.set(key, request);
-  return cloneBars(await request);
+  return cloneLoad(await request);
+}
+
+export async function fetchHistoricalData(
+  ticker: string,
+  assetType: AssetType,
+  startDate: string,
+  endDate: string,
+): Promise<OhlcBar[]> {
+  return (await fetchHistoricalLoad(ticker, assetType, startDate, endDate)).bars;
 }
 
 const WARM_HISTORY_DAYS = 365 * 5 + 250;

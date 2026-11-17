@@ -211,6 +211,8 @@ export interface BacktestResult {
   metrics: RiskMetrics;
   drawdownCurve: DrawdownPoint[];
   committee: CommitteeResult;
+  /** Present when the run used stored Blob/local bars because live feeds failed or did not cover the window. */
+  dataNotice?: string;
 }
 
 export interface SweepCell {
