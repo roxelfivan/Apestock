@@ -1,8 +1,8 @@
 import { DataError, ValidationError } from "../errors.js";
-import { addUtcDays, latestCompleteSession } from "../lib/dates.js";
+import { addUtcDays, daysBetween, latestCompleteSession } from "../lib/dates.js";
 import type { AssetType, OhlcBar } from "../types.js";
-import { isCompleteOhlc, toOhlcBar } from "./ohlcParse.js";
-import { downloadDailyBars, type PriceSource } from "./priceProviders.js";
+import { normalizeOhlcBars, toOhlcBar } from "./ohlcParse.js";
+import type { PriceSource } from "./priceProviders.js";
 import {
   barsHaveNewDates,
   firstCoveringLayer,
@@ -32,9 +32,21 @@ function sliceBars(bars: OhlcBar[], startDate: string, endDate: string): OhlcBar
 
 function completeStored(stored: StoredPrices | null): { stored: StoredPrices | null; dropped: boolean } {
   if (!stored) return { stored: null, dropped: false };
-  const bars = stored.bars.filter(isCompleteOhlc);
-  if (bars.length === stored.bars.length) return { stored, dropped: false };
-  return { stored: { ...stored, bars }, dropped: true };
+  const { bars, dropped } = normalizeOhlcBars(stored.bars);
+  return { stored: { ...stored, bars }, dropped };
+}
+
+/** Prefer cache over a Yahoo round-trip when the stored last bar is only a holiday/weekend behind. */
+const MAX_SKIPPED_SUFFIX_DAYS = 5;
+
+async function downloadGaps(
+  symbol: string,
+  assetType: AssetType,
+  startDate: string,
+  endDate: string,
+): Promise<{ bars: OhlcBar[]; source: PriceSource }> {
+  const { downloadDailyBars } = await import("./priceProviders.js");
+  return downloadDailyBars(symbol, assetType, startDate, endDate);
 }
 
 async function loadCoveredBars(
@@ -79,38 +91,43 @@ async function loadCoveredBars(
 
   let bars = picked.stored?.bars ?? [];
   let source = picked.stored?.source;
+  const overlap = sliceBars(bars, startDate, endDate);
+  const last = bars[bars.length - 1]?.date;
+  const suffixGapDays = last && last < endDate ? daysBetween(last, endDate) : 0;
 
   if (!picked.covered) {
-    const first = bars[0]?.date;
-    const last = bars[bars.length - 1]?.date;
     const downloads: Array<Promise<{ bars: OhlcBar[]; source: PriceSource }>> = [];
+    // Warmup prefix before the first stored bar must not block a run that already
+    // has bars inside the requested window. Yahoo quota would otherwise discard Blob.
+    const needFullDownload = bars.length === 0 || overlap.length === 0;
+    const needSuffix =
+      Boolean(last && last < endDate) && (overlap.length === 0 || suffixGapDays > MAX_SKIPPED_SUFFIX_DAYS);
 
-    if (bars.length === 0) {
-      downloads.push(downloadDailyBars(symbol, assetType, startDate, endDate));
-    } else {
-      if (first && first > startDate) {
-        downloads.push(downloadDailyBars(symbol, assetType, startDate, addUtcDays(first, -1)));
-      }
-      if (last && last < endDate) {
-        downloads.push(downloadDailyBars(symbol, assetType, last, endDate));
-      }
+    if (needFullDownload) {
+      downloads.push(downloadGaps(symbol, assetType, startDate, endDate));
+    } else if (needSuffix) {
+      downloads.push(downloadGaps(symbol, assetType, last!, endDate));
     }
 
     if (downloads.length > 0) {
-      const fetched = await Promise.all(downloads);
-      const next = mergeBars(bars, ...fetched.map((item) => item.bars));
-      if (next.length === 0) {
-        throw new DataError(`No historical data returned for ${symbol}.`);
+      try {
+        const fetched = await Promise.all(downloads);
+        const next = mergeBars(bars, ...fetched.map((item) => item.bars));
+        if (next.length === 0) {
+          throw new DataError(`No historical data returned for ${symbol}.`);
+        }
+        bars = next;
+        source = fetched[fetched.length - 1]?.source ?? source;
+        await writeStoredPrices({
+          symbol,
+          assetType,
+          bars,
+          updatedAt: new Date().toISOString(),
+          source,
+        });
+      } catch (error) {
+        if (overlap.length === 0) throw error;
       }
-      bars = next;
-      source = fetched[fetched.length - 1]?.source ?? source;
-      await writeStoredPrices({
-        symbol,
-        assetType,
-        bars,
-        updatedAt: new Date().toISOString(),
-        source,
-      });
     } else if (bars.length > 0 && droppedIncomplete) {
       await writeStoredPrices({
         symbol,

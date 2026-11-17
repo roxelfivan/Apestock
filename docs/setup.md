@@ -19,7 +19,7 @@ The card under the ticker is a read-only summary from `GET /api/prices/:ticker`:
 - **Layer** — Blob, local file, or empty
 - **Bars / range / updated / source** — what is already stored
 
-Run, sweep, and walk-forward still resolve bars in this order: Blob → local → download only the gap. A covering Blob object does not hit disk or the feeds.
+Run, sweep, and walk-forward still resolve bars in this order: Blob → local → download only the gap. A Blob that already overlaps the requested dates is used even when a few warmup days before it are missing. Yahoo is not required for that case.
 
 ## Capital and size
 

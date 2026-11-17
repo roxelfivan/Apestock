@@ -15,13 +15,15 @@
 
 If Blob already spans `[startDate, endDate]` through the latest completed session, **no local read and no download**.
 
-Incomplete OHLC (null/zero close) is stripped before coverage is tested.
+If Blob only misses a warmup prefix (or a last bar within a few sessions of `endDate`) but still has bars inside the window, **use Blob and skip Yahoo**. A failed suffix download must not discard those bars.
+
+Incomplete OHLC (null/zero close) is stripped before coverage is tested. Dates are normalized to `YYYY-MM-DD` and sorted.
 
 In-flight fetches for the same symbol+range coalesce (`inflight` map).
 
 ## 2. Download waterfall
 
-Stocks: Yahoo library (`yahoo-finance2`) → Yahoo public chart → Stooq.
+Stocks: Yahoo public chart → Stooq → Yahoo library (`yahoo-finance2`). The unofficial library is last so a quota on it cannot block the other free feeds.
 
 Crypto: the same, then Coinbase, Binance.US, Kraken.
 

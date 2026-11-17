@@ -18,6 +18,16 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   `func_spec/`, version-stamped to the npm release like ApEditor (What's new +
   spec version table). `npm run check:docs` verifies markdown links.
 
+### Fixed
+
+- Running a backtest no longer throws away a usable Blob/local price file when
+  Yahoo is rate-limited. Warmup days before the first stored bar, and a last
+  session that is only a few days behind, stay on the price database instead of
+  calling Yahoo. A failed gap download keeps the stored bars. Ticker membership
+  checks reuse a stored universe snapshot so a Run does not refresh Yahoo
+  screeners. Daily-bar downloads try Yahoo's public chart and Stooq before the
+  unofficial library.
+
 ## [0.0.6] - 2026-11-16
 
 Blob-first price lookup, a price-database summary in the UI, and production Blob seeding.

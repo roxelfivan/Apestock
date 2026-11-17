@@ -274,9 +274,9 @@ export async function downloadDailyBars(
   if (startDate > endDate) return { bars: [], source: "yahoo" };
 
   const attempts: Array<{ source: PriceSource; run: () => Promise<OhlcBar[]> }> = [
-    { source: "yahoo", run: () => fromYahooLibrary(symbol, startDate, endDate) },
     { source: "yahoo", run: () => fromYahooChart(symbol, assetType, startDate, endDate) },
     { source: "stooq", run: () => fromStooq(symbol, assetType, startDate, endDate) },
+    { source: "yahoo", run: () => fromYahooLibrary(symbol, startDate, endDate) },
   ];
   if (assetType === "CRYPTO") {
     attempts.push(

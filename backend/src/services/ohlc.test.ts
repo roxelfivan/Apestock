@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isCompleteOhlc, rangeCovered, toOhlcBar } from "./ohlcParse.js";
+import { isCompleteOhlc, normalizeOhlcBars, rangeCovered, toOhlcBar } from "./ohlcParse.js";
 
 test("toOhlcBar drops Yahoo's in-progress session where close is null", () => {
   assert.equal(
@@ -24,6 +24,19 @@ test("toOhlcBar accepts numeric strings from Yahoo quotes", () => {
   assert.equal(bar?.close, 81.76);
 });
 
+test("normalizeOhlcBars drops incomplete rows and sorts dates", () => {
+  const { bars, dropped } = normalizeOhlcBars([
+    { date: "2024-01-03", open: 2, high: 2, low: 2, close: 2 },
+    { date: "2024-01-02T00:00:00.000Z", open: 1, high: 1, low: 1, close: 1 },
+    { date: "2024-01-04", open: 1, high: 1, low: 1, close: 0 },
+  ]);
+  assert.equal(dropped, true);
+  assert.deepEqual(
+    bars.map((bar) => bar.date),
+    ["2024-01-02", "2024-01-03"],
+  );
+});
+
 test("toOhlcBar keeps a finished daily bar", () => {
   const bar = toOhlcBar({
     date: new Date("2026-11-04T14:30:00.000Z"),
@@ -44,4 +57,12 @@ test("rangeCovered skips a feed when local bars already span the window", () => 
   assert.equal(rangeCovered(bars, "2020-06-01", "2024-12-31"), true);
   assert.equal(rangeCovered(bars, "2019-01-01", "2024-12-31"), false);
   assert.equal(rangeCovered([], "2020-01-01", "2020-02-01"), false);
+});
+
+test("rangeCovered uses min/max dates when bars are unsorted", () => {
+  const bars = [
+    { date: "2024-12-31", open: 1, high: 1, low: 1, close: 1 },
+    { date: "2020-01-02", open: 1, high: 1, low: 1, close: 1 },
+  ];
+  assert.equal(rangeCovered(bars, "2020-06-01", "2024-12-31"), true);
 });

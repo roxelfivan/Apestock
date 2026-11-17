@@ -314,8 +314,15 @@ export function universeIsFresh(snapshot: UniverseSnapshot, now = Date.now()): b
   return expiresAtFrom(snapshot.fetchedAt) > now;
 }
 
-export async function getUniverseSnapshot(): Promise<UniverseSnapshot> {
+export async function getUniverseSnapshot(
+  options: { allowStale?: boolean } = {},
+): Promise<UniverseSnapshot> {
   if (cache && Date.now() < cache.expiresAt) return cache.snapshot;
+  if (options.allowStale) {
+    if (cache) return cache.snapshot;
+    const durable = await readStoredUniverse();
+    if (durable) return durable;
+  }
   if (inflight) return inflight;
 
   inflight = (async () => {

@@ -261,4 +261,32 @@ describe("backtest price lookup Blob → local → download", { concurrency: fal
       );
     });
   });
+
+  test("fetchHistoricalData uses Blob overlap instead of downloading a warmup prefix", async () => {
+    await withCacheDirs(async ({ blob }) => {
+      const covering = [bar("2020-06-18", 11), bar("2024-01-03", 11), bar("2024-01-04", 11)];
+      await writeJson(path.join(blob, priceDatabaseBlobPath("SMCI")), entry("SMCI", covering));
+      const bars = await fetchHistoricalData("SMCI", "STOCK", "2019-01-01", "2024-01-04");
+      assert.deepEqual(
+        bars.map((row) => [row.date, row.close]),
+        [
+          ["2020-06-18", 11],
+          ["2024-01-03", 11],
+          ["2024-01-04", 11],
+        ],
+      );
+    });
+  });
+
+  test("fetchHistoricalData uses Blob when the last session is only a few days behind", async () => {
+    await withCacheDirs(async ({ blob }) => {
+      const covering = [bar("2024-01-02", 11), bar("2024-01-03", 11), bar("2024-01-04", 11)];
+      await writeJson(path.join(blob, priceDatabaseBlobPath("AVGO")), entry("AVGO", covering));
+      const bars = await fetchHistoricalData("AVGO", "STOCK", "2024-01-02", "2024-01-07");
+      assert.deepEqual(
+        bars.map((row) => row.date),
+        ["2024-01-02", "2024-01-03", "2024-01-04"],
+      );
+    });
+  });
 });

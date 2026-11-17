@@ -1,5 +1,13 @@
 # Troubleshooting
 
+## Blob shows a range but Run still mentions Yahoo's request limit
+
+The price-database card is a **read-only** listing of `price-database/{SYMBOL}.json`. It does not mean every extra warmup day before that range was already stored.
+
+Older builds still called Yahoo to fill a warmup prefix or a 1–2 session tail, then **discarded the Blob** if that unofficial feed returned a quota error. Current builds keep the stored bars when they already overlap the test window, and only download when the file is empty or more than a few sessions behind.
+
+If you still see the quota sentence, the stored file has no bars inside the selected dates (or Yahoo and Stooq both failed on a truly empty ticker).
+
 ## Run fails with a short error about the ticker or dates
 
 HTTP 400 means the engine refused the request: unknown ticker (unless **any symbol** is on), a parameter out of range, or a window with no complete daily bars. Fix the form; the message is the whole story.
