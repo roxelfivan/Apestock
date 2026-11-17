@@ -27,6 +27,9 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   checks reuse a stored universe snapshot so a Run does not refresh Yahoo
   screeners. Daily-bar downloads try Yahoo's public chart and Stooq before the
   unofficial library.
+- Yahoo quota text no longer replaces a stored price range. When Blob/local
+  bars exist, Run uses that file and shows an amber **Using stored prices**
+  notice with the ticker, bar count, and date range.
 
 ## [0.0.6] - 2026-11-16
 

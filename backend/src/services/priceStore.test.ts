@@ -278,6 +278,18 @@ describe("backtest price lookup Blob → local → download", { concurrency: fal
     });
   });
 
+  test("fetchHistoricalLoad names stored Blob bars when a feed would be needed", async () => {
+    const { fetchHistoricalLoad } = await import("./dataService.js");
+    await withCacheDirs(async ({ blob }) => {
+      const covering = [bar("2020-06-18", 11), bar("2024-01-03", 11), bar("2024-01-04", 11)];
+      await writeJson(path.join(blob, priceDatabaseBlobPath("AMD")), entry("AMD", covering));
+      const load = await fetchHistoricalLoad("AMD", "STOCK", "2019-01-01", "2019-06-01");
+      assert.equal(load.bars[0]?.date, "2020-06-18");
+      assert.equal(load.bars.at(-1)?.date, "2024-01-04");
+      assert.match(load.notice ?? "", /AMD already has 3 stored daily bars/);
+    });
+  });
+
   test("fetchHistoricalData uses Blob when the last session is only a few days behind", async () => {
     await withCacheDirs(async ({ blob }) => {
       const covering = [bar("2024-01-02", 11), bar("2024-01-03", 11), bar("2024-01-04", 11)];

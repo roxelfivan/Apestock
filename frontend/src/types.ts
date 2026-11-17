@@ -190,6 +190,7 @@ export interface BacktestResult {
   metrics?: RiskMetrics;
   drawdownCurve?: DrawdownPoint[];
   committee?: CommitteeResult;
+  dataNotice?: string;
 }
 
 export interface SweepCell {

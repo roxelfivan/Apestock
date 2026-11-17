@@ -15,7 +15,7 @@
 
 If Blob already spans `[startDate, endDate]` through the latest completed session, **no local read and no download**.
 
-If Blob only misses a warmup prefix (or a last bar within a few sessions of `endDate`) but still has bars inside the window, **use Blob and skip Yahoo**. A failed suffix download must not discard those bars.
+If Blob only misses a warmup prefix (or a last bar within a few sessions of `endDate`) but still has bars inside the window, **use Blob and skip Yahoo**. A failed suffix download must not discard those bars. The result may include optional `dataNotice` naming the stored range; the UI shows that instead of replacing the page with the generic Yahoo quota sentence.
 
 Incomplete OHLC (null/zero close) is stripped before coverage is tested. Dates are normalized to `YYYY-MM-DD` and sorted.
 

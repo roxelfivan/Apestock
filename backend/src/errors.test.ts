@@ -18,3 +18,9 @@ test("sanitizeUserError keeps short API messages", () => {
 test("sanitizeUserError maps Yahoo quota pages to a fallback hint", () => {
   assert.match(sanitizeUserError("The quota has been exceeded."), /Yahoo's unofficial feed/);
 });
+
+test("sanitizeUserError keeps stored-bar context on a quota failure", () => {
+  const message =
+    "Unable to fetch NVDA (yahoo: The quota has been exceeded.). NVDA already has 1620 stored daily bars (2020-06-18 → 2026-11-16). This run uses the stored file.";
+  assert.equal(sanitizeUserError(message), message);
+});

@@ -3,7 +3,7 @@ import { ValidationError } from "../errors.js";
 import { getUniverseSnapshot } from "../services/universeService.js";
 import { countMissingSessions, isIsoDate, isTimeframe, timeframeToRange, addUtcDays } from "../lib/dates.js";
 import { round } from "../lib/math.js";
-import { fetchHistoricalData } from "../services/dataService.js";
+import { fetchHistoricalLoad } from "../services/dataService.js";
 import type {
   AssetType,
   BacktestRequest,
@@ -144,14 +144,14 @@ export async function authorizeParsedRequest(parsed: ParsedRequest): Promise<Par
 
 export async function executeBacktest(body: BacktestRequest): Promise<BacktestResult> {
   const parsed = await authorizeParsedRequest(parseBacktestRequest(body));
-  const bars = await fetchHistoricalData(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
-  return buildResult(parsed, bars);
+  const load = await fetchHistoricalLoad(parsed.ticker, parsed.assetType, parsed.fetchStart, parsed.endDate);
+  return buildResult(parsed, load.bars, { dataNotice: load.notice });
 }
 
 export function buildResult(
   parsed: ParsedRequest,
   bars: OhlcBar[],
-  options: { committee?: boolean } = {},
+  options: { committee?: boolean; dataNotice?: string } = {},
 ): BacktestResult {
   const { signals, minBars, series } = computeSignals(bars, parsed.strategy, parsed.params);
   if (bars.length < minBars) {
@@ -209,6 +209,7 @@ export function buildResult(
     bars: indicatorBars,
     metrics: computeRiskMetrics(parsed.startingCapital, engine.equityCurve, engine.trades),
     drawdownCurve: drawdownCurve(engine.equityCurve),
+    dataNotice: options.dataNotice,
     committee:
       options.committee === false
         ? {

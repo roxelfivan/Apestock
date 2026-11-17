@@ -19,7 +19,7 @@ export class DataError extends Error {
 const HTML_ERROR =
   "Yahoo Finance is temporarily unavailable. Wait a minute and try again.";
 
-const QUOTA_ERROR =
+export const QUOTA_ERROR =
   "Yahoo's unofficial feed hit a free-request limit. Daily bars then try Yahoo's public chart, Stooq, and for crypto Coinbase / Binance.US / Kraken.";
 
 export function isQuotaOrThrottleError(raw: unknown): boolean {
@@ -27,9 +27,24 @@ export function isQuotaOrThrottleError(raw: unknown): boolean {
   return /quota has been exceeded|too many requests|rate limit|429|throttle|unofficial-api/i.test(text);
 }
 
+export function describeStoredBars(
+  symbol: string,
+  firstBar: string | null | undefined,
+  lastBar: string | null | undefined,
+  count: number,
+): string {
+  if (count <= 0 || !firstBar || !lastBar) return `${symbol} has no stored daily bars yet.`;
+  return `${symbol} already has ${count} stored daily bars (${firstBar} → ${lastBar}).`;
+}
+
 export function sanitizeUserError(raw: unknown, fallback = "Request failed."): string {
   const text = typeof raw === "string" ? raw.trim() : raw instanceof Error ? raw.message.trim() : "";
   if (!text) return fallback;
+  // Composed messages that already name the price file must not collapse to the
+  // generic Yahoo quota sentence.
+  if (/stored daily bars|stored file/i.test(text)) {
+    return text.length > 400 ? `${text.slice(0, 397)}...` : text;
+  }
   if (isQuotaOrThrottleError(text)) return QUOTA_ERROR;
   if (
     /<!DOCTYPE|<html[\s>]|<\/html>|sad-panda|Inactivity Timeout|query2\.finance\.yahoo/i.test(text)

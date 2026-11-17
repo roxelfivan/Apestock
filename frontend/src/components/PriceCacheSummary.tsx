@@ -5,6 +5,7 @@ interface PriceCacheSummaryProps {
   ticker: string;
   summary: PriceCacheSummaryData | null;
   loading: boolean;
+  feedLimited?: boolean;
 }
 
 function sourceLabel(source: PriceCacheSummaryData["source"]): string {
@@ -17,7 +18,7 @@ function sourceLabel(source: PriceCacheSummaryData["source"]): string {
   return source;
 }
 
-export default function PriceCacheSummary({ ticker, summary, loading }: PriceCacheSummaryProps) {
+export default function PriceCacheSummary({ ticker, summary, loading, feedLimited }: PriceCacheSummaryProps) {
   const symbol = ticker.trim().toUpperCase() || "—";
 
   return (
@@ -60,6 +61,11 @@ export default function PriceCacheSummary({ ticker, summary, loading }: PriceCac
           </div>
         </dl>
       )}
+      {feedLimited && summary?.present ? (
+        <p className="mt-3 text-xs text-amber-200">
+          Live feeds are limited. Run uses this stored range instead of waiting on Yahoo.
+        </p>
+      ) : null}
     </section>
   );
 }

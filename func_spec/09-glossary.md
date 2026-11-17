@@ -21,7 +21,7 @@
 
 ## 3. `BacktestResult` (version 3)
 
-Notable fields: `version`, `ticker`, `strategy`, `params`, capital/size/costs, `timeframe`, `startDate`/`endDate`/`testStartDate`, `missingSessions`, `fillModel`, `equityCurve`, `events`, `trades`, `bars`, `drawdown`, `metrics`, `committee`, `finalValue`.
+Notable fields: `version`, `ticker`, `strategy`, `params`, capital/size/costs, `timeframe`, `startDate`/`endDate`/`testStartDate`, `missingSessions`, `fillModel`, `equityCurve`, `events`, `trades`, `bars`, `drawdown`, `metrics`, `committee`, optional `dataNotice`, `finalValue`.
 
 `committee`: `asOf`, `majority`, `weighted`, vote counts, `members[]` (`strategy`, `label`, `params`, `selected`, `ready`, `vote`, `latestSignal`, `lastAction`, `lastActionDate`, `voteReason`, `lastValues`, return / drawdown / Sharpe / winRate / totalTrades).
 
