@@ -6,7 +6,7 @@ This guide is for people using the app. It covers every pane and everyday task.
 
 **In the app:** click **?** in the header (or press `Ctrl+/` / `⌘/` or `?`) to open these same pages. Developers: click **`{ }`** (or `Ctrl+Shift+E` / `⌘Shift+E`) for the Functional Specification.
 
-**Applies to:** v0.0.6 (see [What's new](whats-new.md)).
+**Applies to:** v0.0.7 (see [What's new](whats-new.md)).
 
 ## What you can do
 
@@ -20,7 +20,7 @@ This guide is for people using the app. It covers every pane and everyday task.
 
 ## Start here
 
-1. [What's new](whats-new.md) — current release (v0.0.6: Blob-first prices)
+1. [What's new](whats-new.md) — current release (v0.0.7: stored prices when Yahoo is limited)
 2. [Getting started](getting-started.md) — first run
 3. [Workspace](workspace.md) — layout, Help, deep links
 4. [Setup](setup.md) — ticker, universe, capital, costs, dates

@@ -45,7 +45,7 @@ Notable fields: `version`, `ticker`, `strategy`, `params`, capital/size/costs, `
 |---|---|
 | **Help** | User guide in `docs/`, overlay **?** |
 | **Functional Specification** | This manual in `func_spec/`, overlay **`{ }`** |
-| **npm version** | `package.json` `version` (0.0.6), shown in the header |
+| **npm version** | `package.json` `version` (0.0.7), shown in the header |
 | **Result version** | `BacktestResult.version` (3) |
 | **Zone vote** | `regimeVote` output; not a fill |
 | **Price database** | Shared Blob folder `price-database/` plus local JSON |

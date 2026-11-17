@@ -5,7 +5,7 @@ The shell is a two-column dashboard on a wide screen and two tabs on a phone.
 ## Header
 
 - Ape icon returns to `/`
-- **Apestock** plus the running version (`v0.0.6`)
+- **Apestock** plus the running version (`v0.0.7`)
 - **?** opens this Help
 - **`{ }`** opens the Functional Specification (developer manual)
 

@@ -20,7 +20,7 @@ Base: same origin `/api`. JSON bodies. Validation and data errors: **400** `{ "e
 
 `BacktestRequest` fields: `ticker`, `assetType`, `strategy`, `params`, `startingCapital`, `tradePercent` (default 20), `timeframe` (`1Y\|3Y\|5Y\|CUSTOM`), `startDate`/`endDate` for CUSTOM, `sizingMode`, `commissionBps`, `commissionPerShare`, `slippageBps`, `allowAnySymbol`.
 
-`BacktestResult.version` is **3** (`RESULT_VERSION`). Do not reuse 1–2. Bump this integer when the JSON gains/removes required fields; that is separate from npm **0.0.6**.
+`BacktestResult.version` is **3** (`RESULT_VERSION`). Do not reuse 1–2. Bump this integer when the JSON gains/removes required fields; that is separate from npm **0.0.7**.
 
 ## 2. Query string
 
