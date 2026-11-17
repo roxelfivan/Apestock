@@ -34,9 +34,30 @@ export function isCompleteOhlc(bar: OhlcBar): boolean {
   return toOhlcBar(bar) !== null;
 }
 
+export function normalizeOhlcBars(bars: OhlcBar[]): { bars: OhlcBar[]; dropped: boolean } {
+  const byDate = new Map<string, OhlcBar>();
+  let dropped = false;
+  for (const row of bars) {
+    const bar = toOhlcBar(row);
+    if (!bar) {
+      dropped = true;
+      continue;
+    }
+    if (bar.date !== row.date) dropped = true;
+    byDate.set(bar.date, bar);
+  }
+  if (byDate.size !== bars.length) dropped = true;
+  const next = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return { bars: next, dropped };
+}
+
 export function rangeCovered(bars: OhlcBar[], startDate: string, endDate: string): boolean {
   if (bars.length === 0) return false;
-  const first = bars[0]?.date;
-  const last = bars[bars.length - 1]?.date;
+  let first = bars[0]?.date;
+  let last = bars[0]?.date;
+  for (const bar of bars) {
+    if (bar.date < first) first = bar.date;
+    if (bar.date > last) last = bar.date;
+  }
   return Boolean(first && last && first <= startDate && last >= endDate);
 }

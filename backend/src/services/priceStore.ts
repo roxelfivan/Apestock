@@ -9,7 +9,7 @@ import {
   writeBlobPath,
   writeJsonFile,
 } from "./durableStore.js";
-import { rangeCovered } from "./ohlcParse.js";
+import { normalizeOhlcBars, rangeCovered } from "./ohlcParse.js";
 import type { PriceSource } from "./priceProviders.js";
 
 export interface StoredPrices {
@@ -189,7 +189,8 @@ export async function summarizePriceCache(ticker: string): Promise<PriceCacheSum
 
   const fromBlob = await readBlobPricesWithPath(symbol);
   if (fromBlob) {
-    return summaryFromStored(symbol, fromBlob.stored, "blob", fromBlob.path);
+    const { bars } = normalizeOhlcBars(fromBlob.stored.bars);
+    return summaryFromStored(symbol, { ...fromBlob.stored, bars }, "blob", fromBlob.path);
   }
 
   const fromDisk = await readLocalPrices(symbol);
@@ -199,7 +200,8 @@ export async function summarizePriceCache(ticker: string): Promise<PriceCacheSum
     const displayPath = absolute.startsWith(`${cwd}/`)
       ? absolute.slice(cwd.length + 1)
       : `data/prices/${safeSymbol(symbol)}.json`;
-    return summaryFromStored(symbol, fromDisk, "local", displayPath);
+    const { bars } = normalizeOhlcBars(fromDisk.bars);
+    return summaryFromStored(symbol, { ...fromDisk, bars }, "local", displayPath);
   }
 
   return emptySummary(symbol);

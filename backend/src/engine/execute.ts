@@ -133,7 +133,7 @@ export function fillModelLabel(parsed: ParsedRequest): string {
 
 export async function authorizeParsedRequest(parsed: ParsedRequest): Promise<ParsedRequest> {
   if (parsed.allowAnySymbol) return parsed;
-  const snapshot = await getUniverseSnapshot();
+  const snapshot = await getUniverseSnapshot({ allowStale: true });
   if (!isValidTicker(parsed.ticker, parsed.assetType, snapshot)) {
     throw new ValidationError(
       `${parsed.ticker} is not in the ${parsed.assetType} universe. Enable allowAnySymbol to override.`,
