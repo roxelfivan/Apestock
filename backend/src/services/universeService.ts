@@ -6,7 +6,17 @@ import {
 } from "../data/universe.js";
 import { DataError, sanitizeUserError } from "../errors.js";
 import { readStoredUniverse, writeStoredUniverse } from "./universeStore.js";
-import { predefinedScreener, screenQuotes, type ScreenerQuote } from "./yahooClient.js";
+import type { ScreenerQuote } from "./yahooClient.js";
+
+async function screenQuotes(body: Record<string, unknown>): Promise<ScreenerQuote[]> {
+  const yahoo = await import("./yahooClient.js");
+  return yahoo.screenQuotes(body);
+}
+
+async function predefinedScreener(scrIds: string, count: number): Promise<ScreenerQuote[]> {
+  const yahoo = await import("./yahooClient.js");
+  return yahoo.predefinedScreener(scrIds, count);
+}
 
 export const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
 const USER_AGENT = "Apestock/1.0 (https://github.com/roxelfivan/Apestock)";
@@ -314,14 +324,20 @@ export function universeIsFresh(snapshot: UniverseSnapshot, now = Date.now()): b
   return expiresAtFrom(snapshot.fetchedAt) > now;
 }
 
+/** Ranked lists for ticker checks. Never calls Yahoo — a backtest with Blob prices must not depend on screeners. */
+export async function getUniverseForAuthorization(): Promise<UniverseSnapshot | null> {
+  if (cache) return cache.snapshot;
+  return readStoredUniverse();
+}
+
 export async function getUniverseSnapshot(
   options: { allowStale?: boolean } = {},
 ): Promise<UniverseSnapshot> {
   if (cache && Date.now() < cache.expiresAt) return cache.snapshot;
   if (options.allowStale) {
-    if (cache) return cache.snapshot;
-    const durable = await readStoredUniverse();
-    if (durable) return durable;
+    const stored = await getUniverseForAuthorization();
+    if (stored) return stored;
+    throw new DataError("No stored ticker universe is available.");
   }
   if (inflight) return inflight;
 

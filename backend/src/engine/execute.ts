@@ -1,6 +1,6 @@
 import { isValidTicker } from "../data/universe.js";
 import { ValidationError } from "../errors.js";
-import { getUniverseSnapshot } from "../services/universeService.js";
+import { getUniverseForAuthorization } from "../services/universeService.js";
 import { countMissingSessions, isIsoDate, isTimeframe, timeframeToRange, addUtcDays } from "../lib/dates.js";
 import { round } from "../lib/math.js";
 import { fetchHistoricalLoad } from "../services/dataService.js";
@@ -133,7 +133,9 @@ export function fillModelLabel(parsed: ParsedRequest): string {
 
 export async function authorizeParsedRequest(parsed: ParsedRequest): Promise<ParsedRequest> {
   if (parsed.allowAnySymbol) return parsed;
-  const snapshot = await getUniverseSnapshot({ allowStale: true });
+  const snapshot = await getUniverseForAuthorization();
+  // Yahoo screeners must not block a run when daily bars are already in the price database.
+  if (!snapshot) return parsed;
   if (!isValidTicker(parsed.ticker, parsed.assetType, snapshot)) {
     throw new ValidationError(
       `${parsed.ticker} is not in the ${parsed.assetType} universe. Enable allowAnySymbol to override.`,

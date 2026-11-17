@@ -271,6 +271,7 @@ export default function App() {
     const symbol = ticker.trim().toUpperCase();
     if (!symbol) return;
     if (universe && !allowAnySymbol && !isValidTicker(symbol, assetType, universe)) return;
+    if (priceSummary?.present) return;
     try {
       setPriceSync(await syncPrices(symbol, assetType));
     } catch {
@@ -291,6 +292,7 @@ export default function App() {
       setResult(payload);
       setStale(false);
       setRuns(saveRun(nextConfig, payload));
+      setPane("results");
     } catch (err) {
       if (runIdRef.current !== runId) return;
       setResult(null);

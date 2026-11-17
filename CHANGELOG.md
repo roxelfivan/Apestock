@@ -30,6 +30,8 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 - Yahoo quota text no longer replaces a stored price range. When Blob/local
   bars exist, Run uses that file and shows an amber **Using stored prices**
   notice with the ticker, bar count, and date range.
+- Run no longer refreshes Yahoo screeners (or a price sync) before loading
+  Blob bars. A stored NVDA file produces charts even when Yahoo is limited.
 
 ## [0.0.6] - 2026-11-16
 
