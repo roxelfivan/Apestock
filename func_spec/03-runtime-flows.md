@@ -17,7 +17,7 @@
 2. `executeBacktest` bumps `runIdRef` (the race guard from v0.0.4).
 3. `POST /api/prices/sync` with `{ ticker, assetType }` (no `bars`).
 4. `POST /api/backtest` with the form body.
-5. Backend `parseBacktestRequest` → `authorizeParsedRequest` (stale stored universe is enough unless `allowAnySymbol`) → `fetchHistoricalData` from `fetchStart` (window start minus warmup, including `committeeFetchWarmup()` so every member is ready). Stored Blob/local bars that overlap that window are used even if Yahoo cannot extend them.
+5. Backend `parseBacktestRequest` → `authorizeParsedRequest` (stored universe only, never Yahoo screeners; missing snapshot does not block) → `fetchHistoricalLoad` from `fetchStart` (window start minus warmup, including `committeeFetchWarmup()` so every member is ready). Stored Blob/local bars that overlap that window are used even if Yahoo cannot extend them. The frontend skips `/api/prices/sync` when the Price database card already lists bars.
 6. `computeSignals` on the full fetch; `runEngine` from the first bar in the **test** window; `computeCommittee` on the same bars; `buildResult` with `version: 3`.
 7. If `runIdRef` still matches, `App` sets `result`, `stale=false`, `saveRun`.
 8. `searchFromConfig` keeps the URL aligned.
