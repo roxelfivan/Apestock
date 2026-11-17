@@ -10,6 +10,8 @@ If stored bars exist, Run should switch to **Results** and draw the equity, pric
 
 If you only see the notice on Setup and no charts, the run still failed before prices were loaded (older builds refreshed Yahoo screeners first). Current builds skip that and authorize from a stored universe, or skip the check when none is stored.
 
+If Run finishes and **Results** still says "No backtest yet", an older build could throw while writing history (`localStorage` quota with 12 fat NVDA results) and then clear the charts. Current builds keep the in-memory result, slim what is saved, and show the error on the Results tab too.
+
 If you still see the quota sentence with an empty Price database card, this ticker has no Blob/local bars yet (or Yahoo and Stooq both failed on a truly empty ticker).
 
 ## Run fails with a short error about the ticker or dates

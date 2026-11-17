@@ -291,13 +291,18 @@ export default function App() {
       if (runIdRef.current !== runId) return;
       setResult(payload);
       setStale(false);
-      setRuns(saveRun(nextConfig, payload));
+      setError("");
       setPane("results");
+      try {
+        setRuns(saveRun(nextConfig, payload));
+      } catch {
+        // History is best-effort. A full NVDA result can exceed localStorage; charts must still show.
+      }
     } catch (err) {
       if (runIdRef.current !== runId) return;
       setResult(null);
       setError(sanitizeUserError(err, "Unable to run backtest.", priceSummary));
-      setPane("setup");
+      setPane("results");
       queueMicrotask(() => errorRef.current?.focus());
     } finally {
       if (runIdRef.current === runId) setLoading(false);
@@ -599,6 +604,24 @@ export default function App() {
               >
                 <p className="font-semibold text-amber-50">Using stored prices</p>
                 <p className="mt-1 text-amber-100/90">{result.dataNotice}</p>
+              </div>
+            ) : null}
+            {error && !result ? (
+              <div
+                className={
+                  priceSummary?.present
+                    ? "rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 break-words"
+                    : "rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 break-words"
+                }
+                role="alert"
+              >
+                <p className={priceSummary?.present ? "font-semibold text-amber-50" : "font-semibold text-rose-200"}>
+                  {priceSummary?.present ? "Stored prices are still available" : "There is a problem"}
+                </p>
+                <p className="mt-1">{error}</p>
+                <p className="mt-2 text-xs text-slate-400">
+                  Charts appear here after a run finishes. Setup still has the ticker and price database.
+                </p>
               </div>
             ) : null}
             <MetricsDashboard
