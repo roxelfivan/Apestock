@@ -12,7 +12,8 @@
     "dev:backend": "npm run dev -w apestock-backend",
     "dev:frontend": "npm run dev -w frontend",
     "typecheck": "npm run typecheck -w apestock-backend && npm run typecheck -w frontend",
-    "test": "npm run test -w apestock-backend"
+    "test": "npm run test -w apestock-backend",
+    "check:docs": "node scripts/check-docs.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

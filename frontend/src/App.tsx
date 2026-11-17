@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import packageJson from "../package.json";
 import AssetSelector from "./components/AssetSelector";
 import CommitteeBox from "./components/CommitteeBox";
 import DrawdownChart from "./components/DrawdownChart";
+import { FuncSpecDocs } from "./components/FuncSpecDocs";
+import { HelpDocs } from "./components/HelpDocs";
 import MetricsDashboard from "./components/MetricsDashboard";
 import MonthlyGrid from "./components/MonthlyGrid";
 import PriceCacheSummary from "./components/PriceCacheSummary";
@@ -11,6 +12,8 @@ import ResearchPanels from "./components/ResearchPanels";
 import RunHistory from "./components/RunHistory";
 import StrategyForm from "./components/StrategyForm";
 import TradeTable from "./components/TradeTable";
+import { isHelpPageId, type HelpPageId } from "./docs/catalog";
+import { isFuncSpecPageId } from "./docs/funcSpecCatalog";
 import { isValidTicker, readStoredUniverse, storeUniverse, universeFor, universeIsFresh } from "./data/universes";
 import { fetchPriceSummary, fetchUniverse, runBacktest, runSweep, runWalkForward, syncPrices } from "./lib/api";
 import { sanitizeUserError } from "./lib/errors";
@@ -19,6 +22,7 @@ import { btnPrimary } from "./ui";
 import { loadRuns, saveRun } from "./lib/history";
 import { configFromSearch, searchFromConfig } from "./lib/queryState";
 import { paramsError } from "./lib/validation";
+import { APP_VERSION } from "./version";
 import type {
   AssetType,
   BacktestConfig,
@@ -78,6 +82,10 @@ export default function App() {
   const [priceSummary, setPriceSummary] = useState<PriceCacheSummaryData | null>(null);
   const [priceSummaryLoading, setPriceSummaryLoading] = useState(false);
   const [pane, setPane] = useState<"setup" | "results">("setup");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpPage, setHelpPage] = useState<HelpPageId>("home");
+  const [funcSpecOpen, setFuncSpecOpen] = useState(false);
+  const [funcSpecPage, setFuncSpecPage] = useState<string | undefined>(undefined);
   const errorRef = useRef<HTMLDivElement>(null);
   const runIdRef = useRef(0);
 
@@ -127,6 +135,57 @@ export default function App() {
       window.history.replaceState(null, "", next);
     }
   }, [config]);
+
+  useEffect(() => {
+    function isEditingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    }
+
+    function onKey(event: KeyboardEvent) {
+      const helpChord = (event.ctrlKey || event.metaKey) && event.key === "/";
+      const specChord = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "e";
+      const helpQuestion = event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey;
+      if (helpChord || (helpQuestion && !isEditingTarget(event.target))) {
+        event.preventDefault();
+        setFuncSpecOpen(false);
+        setHelpPage("home");
+        setHelpOpen(true);
+        return;
+      }
+      if (specChord) {
+        event.preventDefault();
+        setHelpOpen(false);
+        setFuncSpecPage(undefined);
+        setFuncSpecOpen(true);
+      }
+    }
+
+    function onOpenHelp(event: Event) {
+      const page = (event as CustomEvent<unknown>).detail;
+      setFuncSpecOpen(false);
+      setHelpPage(typeof page === "string" && isHelpPageId(page) ? page : "home");
+      setHelpOpen(true);
+    }
+
+    function onOpenSpec(event: Event) {
+      const page = (event as CustomEvent<unknown>).detail;
+      setHelpOpen(false);
+      setFuncSpecPage(typeof page === "string" && isFuncSpecPageId(page) ? page : undefined);
+      setFuncSpecOpen(true);
+    }
+
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("apestock:open-help", onOpenHelp);
+    window.addEventListener("apestock:open-func-spec", onOpenSpec);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("apestock:open-help", onOpenHelp);
+      window.removeEventListener("apestock:open-func-spec", onOpenSpec);
+    };
+  }, []);
 
   useEffect(() => {
     if (universeIsFresh(readStoredUniverse())) {
@@ -365,7 +424,7 @@ export default function App() {
               <p className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Apestock</span>
                 <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-medium tracking-wide text-emerald-300">
-                  v{packageJson.version}
+                  v{APP_VERSION}
                 </span>
               </p>
               <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-white sm:text-2xl">Daily backtester</h1>
@@ -375,9 +434,37 @@ export default function App() {
               </p>
             </div>
           </div>
-          <p className="hidden rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400 lg:block">
-            long only · T+1 open · warmup before the test window
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="hidden rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-400 lg:block">
+              long only · T+1 open · warmup before the test window
+            </p>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 text-sm font-semibold text-slate-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              onClick={() => {
+                setFuncSpecOpen(false);
+                setHelpPage("home");
+                setHelpOpen(true);
+              }}
+              title="Help (Ctrl+/)"
+              aria-label="Open help"
+            >
+              ?
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-slate-700 px-2 font-mono text-sm font-semibold text-slate-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              onClick={() => {
+                setHelpOpen(false);
+                setFuncSpecPage(undefined);
+                setFuncSpecOpen(true);
+              }}
+              title="Functional Specification (Ctrl+Shift+E)"
+              aria-label="Open functional specification"
+            >
+              {"{ }"}
+            </button>
+          </div>
         </header>
 
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -541,6 +628,16 @@ export default function App() {
           </nav>
         </div>
       </div>
+      <HelpDocs
+        open={helpOpen}
+        initialPage={helpPage}
+        onClose={() => setHelpOpen(false)}
+      />
+      <FuncSpecDocs
+        open={funcSpecOpen}
+        initialPage={funcSpecPage}
+        onClose={() => setFuncSpecOpen(false)}
+      />
     </div>
   );
 }

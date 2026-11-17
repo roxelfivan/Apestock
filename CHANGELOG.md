@@ -12,6 +12,12 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
 
 ## [Unreleased]
 
+### Added
+
+- In-app **Help** (`?`) from `docs/` and **Functional Specification** (`{ }`) from
+  `func_spec/`, version-stamped to the npm release like ApEditor (What's new +
+  spec version table). `npm run check:docs` verifies markdown links.
+
 ## [0.0.6] - 2026-11-16
 
 Blob-first price lookup, a price-database summary in the UI, and production Blob seeding.
