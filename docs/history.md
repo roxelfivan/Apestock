@@ -4,7 +4,7 @@ The last **12** successful runs in **this browser** sit at the bottom of Results
 
 ## What is stored
 
-Each row keeps the full setup and the result payload (equity, trades, bars, committee). The key is `apestock.runs.v1` in `localStorage`. Another device, a private window, or clearing site data will not see them.
+Each row keeps the setup plus a slimmer result (equity, trades, OHLC without indicator columns, committee without last-value maps). The key is `apestock.runs.v1` in `localStorage`. If the browser quota is full, older rows are dropped; a failed save must not clear the charts you just ran. Another device, a private window, or clearing site data will not see them.
 
 ## Load
 

@@ -32,6 +32,9 @@ When you cut a release, add a new `## [X.Y.Z] - YYYY-MM-DD` section at the top
   notice with the ticker, bar count, and date range.
 - Run no longer refreshes Yahoo screeners (or a price sync) before loading
   Blob bars. A stored NVDA file produces charts even when Yahoo is limited.
+- A successful backtest always keeps the Results pane even if `localStorage`
+  cannot save history. Saved runs store slimmer OHLC (no per-bar indicator
+  maps) so a large NVDA result does not wipe the charts.
 
 ## [0.0.6] - 2026-11-16
 
