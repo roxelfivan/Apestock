@@ -136,7 +136,13 @@ export function FuncSpecDocs({ open, onClose, initialPage }: Props) {
       aria-label="Apestock Functional Specification"
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur sm:px-6">
-        <img src="/app-icon.png" alt="" className="h-9 w-auto rounded-lg" width={36} height={45} />
+        <img
+          src="/app-icon.png"
+          alt=""
+          className="h-12 w-auto max-w-none shrink-0 object-contain"
+          width={628}
+          height={640}
+        />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-lg font-semibold text-white">Functional Specification</p>
           <p className="truncate font-mono text-[10px] text-slate-400">

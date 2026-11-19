@@ -84,7 +84,13 @@ export function HelpDocs({ open, onClose, initialPage = "home" }: Props) {
       aria-label="Apestock help"
     >
       <header className="flex shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900/95 px-4 py-3 backdrop-blur sm:px-6">
-        <img src="/app-icon.png" alt="" className="h-9 w-auto rounded-lg" width={36} height={45} />
+        <img
+          src="/app-icon.png"
+          alt=""
+          className="h-12 w-auto max-w-none shrink-0 object-contain"
+          width={628}
+          height={640}
+        />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-lg font-semibold text-white">Apestock Help</p>
           <p className="font-mono text-[10px] text-slate-400">User guide · v{APP_VERSION}</p>

@@ -417,14 +417,14 @@ export default function App() {
             <a
               href="/"
               aria-label="Apestock home"
-              className="shrink-0 rounded-xl outline-none ring-1 ring-emerald-400/25 focus-visible:ring-2 focus-visible:ring-emerald-400"
+              className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
             >
               <img
                 src="/app-icon.png"
-                alt=""
-                width={44}
-                height={55}
-                className="h-11 w-auto rounded-xl bg-slate-950"
+                alt="Ape Stock"
+                width={628}
+                height={640}
+                className="h-16 w-auto max-w-none shrink-0 object-contain"
               />
             </a>
             <div className="min-w-0">
